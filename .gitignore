@@ -1,6 +1,7 @@
 # Generated outputs
 data/
-*chkpt
+**/*chkpt
+**/*gz
 
 # Byte-compiled / optimized / DLL files
 **/__pycache__/
