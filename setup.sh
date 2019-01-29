@@ -5,15 +5,14 @@ pip3 install -r requirements.txt
 
 ### === WMT DATA === ###
 # moses tokenizer and bleu score
-if [ ! -f tokenizer.perl ]; then 
-    wget https://raw.githubusercontent.com/moses-smt/mosesdecoder/master/scripts/tokenizer/tokenizer.perl; fi
-if [ ! -f nonbreaking_prefix.de ]; then
-    wget https://raw.githubusercontent.com/moses-smt/mosesdecoder/master/scripts/share/nonbreaking_prefixes/nonbreaking_prefix.de; fi
-if [ ! -f nonbreaking_prefix.en ]; then
-    wget https://raw.githubusercontent.com/moses-smt/mosesdecoder/master/scripts/share/nonbreaking_prefixes/nonbreaking_prefix.en; fi
-sed -i '.bak' "s/$RealBin\/..\/share\/nonbreaking_prefixes//" tokenizer.perl
-if [ ! -f multi-bleu.perl ]; then
-    wget https://raw.githubusercontent.com/moses-smt/mosesdecoder/master/scripts/generic/multi-bleu.perl; fi
+if [ ! -d wmt ]; then
+    mkdir -p wmt
+    wget https://raw.githubusercontent.com/moses-smt/mosesdecoder/master/scripts/tokenizer/tokenizer.perl -C wmt
+    wget https://raw.githubusercontent.com/moses-smt/mosesdecoder/master/scripts/share/nonbreaking_prefixes/nonbreaking_prefix.de -C wmt
+    wget https://raw.githubusercontent.com/moses-smt/mosesdecoder/master/scripts/share/nonbreaking_prefixes/nonbreaking_prefix.en -C wmt
+    sed -i '.bak' "s/$RealBin\/..\/share\/nonbreaking_prefixes//" tokenizer.perl
+    wget https://raw.githubusercontent.com/moses-smt/mosesdecoder/master/scripts/generic/multi-bleu.perl -C wmt
+fi
 
 # download wmt data
 if [ ! -d data/multi30k ]; then
@@ -25,13 +24,5 @@ fi
 
 # preprocess data
 for l in en de; do for f in data/multi30k/*.$l; do if [[ "$f" != *"test"* ]]; then sed -i '' "$ d" $f; fi;  done; done
-for l in en de; do for f in data/multi30k/*.$l; do perl tokenizer.perl -a -no-escape -l $l -q  < $f > $f.atok; done; done
+for l in en de; do for f in data/multi30k/*.$l; do perl wmt/tokenizer.perl -a -no-escape -l $l -q  < $f > $f.atok; done; done
 python3 preprocess.py -train_src data/multi30k/train.en.atok -train_tgt data/multi30k/train.de.atok -valid_src data/multi30k/val.en.atok -valid_tgt data/multi30k/val.de.atok -save_data data/multi30k.atok.low.pt
-
-### === ARGUMENT CORPUS DATA === ###
-# download argument corpus data
-if [ ! -d data/arg5k ]; then
-    mkdir -p data/arg5k
-    wget http://nldslab.soe.ucsc.edu/iac/v2/convinceme_no_parse_2016_05_18.sql.gz && gunzip convinceme_no_parse_2016_05_18.sql.gz -C data/arg5k && rm convinceme_no_parse_2016_05_18.sql.gz
-    wget http://nldslab.soe.ucsc.edu/iac/v2/convinceme_2016_05_18.sql.gz && gunzip convinceme_2016_05_18.sql.gz -C data/arg5k && rm convinceme_2016_05_18.sql.gz
-fi
