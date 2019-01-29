@@ -1,8 +1,8 @@
 # Adapting the Transformer for Dialogue with Memory
+This is a PyTorch adaptation of the Transformer model in "[Attention is All You Need](https://arxiv.org/abs/1706.03762)" for dialogue-based memory systems. We borrow the Transformer encoder and decoder to encode input and generate response, respectively. The encoded input updates a hidden state in a simple RNN, which serves as a session memory. We train our dialogue system with the [Internet Argument Corpus v2](https://nlds.soe.ucsc.edu/iac2).
 
-This is a PyTorch adaptation of the Transformer model in "[Attention is All You Need](https://arxiv.org/abs/1706.03762)" (Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin, arxiv, 2017).
-
-A novel sequence to sequence framework utilizes the **self-attention mechanism**, instead of Convolution operation or Recurrent structure, and achieve the state-of-the-art performance on **WMT 2014 English-to-German translation task**. (2017/06/12)
+## Transformer
+We borrow the code for the Transformer from [this](https://github.com/jadore801120/attention-is-all-you-need-pytorch) repository.
 
 > The official Tensorflow Implementation can be found in: [tensorflow/tensor2tensor](https://github.com/tensorflow/tensor2tensor/blob/master/tensor2tensor/models/transformer.py).
 
@@ -12,8 +12,8 @@ A novel sequence to sequence framework utilizes the **self-attention mechanism**
 <img src="http://imgur.com/1krF2R6.png" width="250">
 </p>
 
-## Usage: WMT'16 Multimodal Translation, Multi30k (de-en)
-An example of training for the WMT'16 Multimodal Translation task (http://www.statmt.org/wmt16/multimodal-task.html).
+## Base Usage: WMT'16 Multimodal Translation, Multi30k (de-en)
+An example of training for the [WMT'16 Multimodal Translation task](http://www.statmt.org/wmt16/multimodal-task.html).
 
 ### Setup: Dependencies / Data
 ```
@@ -33,7 +33,6 @@ python translate.py -model trained.chkpt -vocab data/multi30k.atok.low.pt \
   -src data/multi30k/test.en.atok -no_cuda
 ```
 
-
 ## Training Performance
 
 <p align="center">
@@ -49,7 +48,3 @@ python translate.py -model trained.chkpt -vocab data/multi30k.atok.low.pt \
 - Elapse per epoch (on NVIDIA Titan X):
   - Training set: 0.888 minutes
   - Validation set: 0.011 minutes
-
-## Acknowledgements
-- The project structure, some scripts and the dataset preprocessing steps are heavily borrowed from [OpenNMT/OpenNMT-py](https://github.com/OpenNMT/OpenNMT-py).
-- Thanks for the suggestions from @srush, @iamalbert and @ZiJianZhao.
