@@ -3,7 +3,6 @@
 # install dependencies
 pip3 install -r requirements.txt
 
-### === WMT DATA === ###
 # moses tokenizer and bleu score
 if [ ! -d wmt ]; then
     mkdir -p wmt
