@@ -12,7 +12,7 @@ We borrow the code for the Transformer from [this](https://github.com/jadore8011
 <img src="http://imgur.com/1krF2R6.png" width="250">
 </p>
 
-## Transformer Usage: WMT'16 Multimodal Translation, Multi30k (de-en)
+## WMT'16 Multimodal Translation, Multi30k (de-en)
 An example of training for the [WMT'16 Multimodal Translation task](http://www.statmt.org/wmt16/multimodal-task.html).
 
 ### Setup: Dependencies / Data
