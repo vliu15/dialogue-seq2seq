@@ -12,7 +12,7 @@ We borrow the code for the Transformer from [this](https://github.com/jadore8011
 <img src="http://imgur.com/1krF2R6.png" width="250">
 </p>
 
-## Base Usage: WMT'16 Multimodal Translation, Multi30k (de-en)
+## Transformer Usage: WMT'16 Multimodal Translation, Multi30k (de-en)
 An example of training for the [WMT'16 Multimodal Translation task](http://www.statmt.org/wmt16/multimodal-task.html).
 
 ### Setup: Dependencies / Data
@@ -33,8 +33,7 @@ python translate.py -model trained.chkpt -vocab data/multi30k.atok.low.pt \
   -src data/multi30k/test.en.atok -no_cuda
 ```
 
-## Training Performance
-
+### Training Performance
 <p align="center">
 <img src="https://imgur.com/rKeP1bb.png" width="400">
 <img src="https://imgur.com/9je3X6U.png" width="400">
