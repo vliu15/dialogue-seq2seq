@@ -1,4 +1,4 @@
-# Adapting the Transformer for Dialogue with Memory
+# Sequence-to-Sequence Generative Dialogue Systems
 This is a PyTorch adaptation of the Transformer model in "[Attention is All You Need](https://arxiv.org/abs/1706.03762)" for dialogue-based memory systems. We borrow the Transformer encoder and decoder to encode input and generate response, respectively. The encoded input updates a hidden state in a simple RNN, which serves as a session memory. We train our dialogue system with the [Internet Argument Corpus v2](https://nlds.soe.ucsc.edu/iac2).
 
 ## Transformer
