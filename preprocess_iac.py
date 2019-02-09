@@ -1,7 +1,9 @@
 #!/usr/local/bin/python3
+from tqdm import tqdm
 import transformer.Constants as Constants
 import argparse
 import pickle
+import torch
 
 def process_sequence(seq, max_post_len, max_disc_len, keep_case):
     # track trimmed counts for warnings
@@ -62,14 +64,18 @@ def read_instances(inst, max_post_len, max_disc_len, keep_case, split_name):
     print('[Info] Get {} instances from {}'.format(len(src_insts), split_name + '-src'))
     print('[Info] Get {} instances from {}'.format(len(tgt_insts), split_name + '-tgt'))
 
-    print('[Info] {}: {} instances are trimmed to the max discussion length {}'
-        .format(split_name + '-src', trimmed_disc_count_src, max_disc_len))
-    print('[Info] {}: {} subinstances are trimmed to the max post length {}'
-        .format(split_name + '-src', trimmed_post_count_src, max_post_len))
-    print('[Info] {}: {} instances are trimmed to the max discussion length {}'
-        .format(split_name + '-tgt', trimmed_disc_count_tgt, max_disc_len))
-    print('[Info] {}: {} subinstances are trimmed to the max post length {}'
-        .format(split_name + '-tgt', trimmed_post_count_tgt, max_post_len))
+    if trimmed_disc_count_src > 0:
+        print('[Warning] {}: {} instances are trimmed to the max discussion length {}'
+            .format(split_name + '-src', trimmed_disc_count_src, max_disc_len))
+    if trimmed_post_count_src > 0:
+        print('[Warning] {}: {} subinstances are trimmed to the max post length {}'
+            .format(split_name + '-src', trimmed_post_count_src, max_post_len))
+    if trimmed_disc_count_tgt > 0:
+        print('[Warning] {}: {} instances are trimmed to the max discussion length {}'
+            .format(split_name + '-tgt', trimmed_disc_count_tgt, max_disc_len))
+    if trimmed_post_count_tgt > 0:
+        print('[Warning] {}: {} subinstances are trimmed to the max post length {}'
+            .format(split_name + '-tgt', trimmed_post_count_tgt, max_post_len))
 
     return src_insts, tgt_insts
 
@@ -125,9 +131,10 @@ def build_vocab_idx(word_insts, min_word_count):
 
     word_count = {w: 0 for w in full_vocab}
 
-    for seq in word_insts:
-        for w in seq:
-            word_count[w] += 1
+    for disc in word_insts:
+        for seq in disc:
+            for w in seq:
+                word_count[w] += 1
 
     ignored_word_count = 0
     for word, count in word_count.items():
@@ -162,20 +169,24 @@ def main():
     opt.max_token_post_len = opt.max_post_len + 2 # include the <s> and </s>
 
     ##-- training set
+    print("[INFO] Loading training set...")
     with open(opt.train_file, 'rb') as f:
         train = pickle.load(f)
-    train_src_word_insts, train_tgt_word_insts = read_instances_from_file(
+    train_src_word_insts, train_tgt_word_insts = read_instances(
         train, opt.max_post_len, opt.max_disc_len, opt.keep_case, 'train')
     # prune for mismatches and empty instances / sequences
+    print("[INFO] Pruning empty sentences and src/tgt mismatches...")
     train_src_word_insts, train_tgt_word_insts = prune(
         train_src_word_insts, train_tgt_word_insts, 'training')
     
     ##-- validation set
+    print("Loading validation set...")
     with open(opt.valid_file, 'rb') as f:
         val = pickle.load(f)
-    val_src_word_insts, val_tgt_word_insts = read_instances_from_file(
+    val_src_word_insts, val_tgt_word_insts = read_instances(
         val, opt.max_post_len, opt.max_disc_len, opt.keep_case, 'valid')
     # prune for mismatches and empty instances / sequences
+    print("[INFO] Pruning empty sentences and src/tgt mismatches...")
     val_src_word_insts, val_tgt_word_insts = prune(
         val_src_word_insts, val_tgt_word_insts, 'validation')
 
@@ -202,11 +213,11 @@ def main():
     ##-- map word to index
     print('[Info] Convert source word instances into sequences of word index.')
     train_src_insts = convert_instance_to_idx_seq(train_src_word_insts, src_word2idx)
-    valid_src_insts = convert_instance_to_idx_seq(valid_src_word_insts, src_word2idx)
+    val_src_insts = convert_instance_to_idx_seq(val_src_word_insts, src_word2idx)
 
     print('[Info] Convert target word instances into sequences of word index.')
     train_tgt_insts = convert_instance_to_idx_seq(train_tgt_word_insts, tgt_word2idx)
-    valid_tgt_insts = convert_instance_to_idx_seq(valid_tgt_word_insts, tgt_word2idx)
+    val_tgt_insts = convert_instance_to_idx_seq(val_tgt_word_insts, tgt_word2idx)
     
     data = {
         'settings': opt,
@@ -217,11 +228,11 @@ def main():
             'src': train_src_insts,
             'tgt': train_tgt_insts},
         'valid': {
-            'src': valid_src_insts,
-            'tgt': valid_tgt_insts}}
+            'src': val_src_insts,
+            'tgt': val_tgt_insts}}
 
-    print('[Info] Dumping the processed data to pickle file', opt.save_data)
-    torch.save(train_data, opt.save_data)
+    print('[Info] Dumping the processed data to pickle file', opt.save_dir + '/train.data.pt')
+    torch.save(data, opt.save_dir + '/train.data.pt')
     print('[Info] Finish.')
 
 if __name__ == '__main__':

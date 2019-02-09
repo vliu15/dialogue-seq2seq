@@ -32,15 +32,15 @@ def main():
     test = data[:total//20]
     print("[INFO] Data split into {}, {}, {} samples for training, validation, and testing.".format(len(train), len(val), len(test)))
 
-    print('[INFO] Saving training set...')
-    with open('../train.pkl', 'wb') as f:
-        pickle.dump(train, f)
     print('[INFO] Saving validation set...')
     with open('../val.pkl', 'wb') as f:
         pickle.dump(val, f)
     print('[INFO] Saving testing set...')
     with open('../test.pkl', 'wb') as f:
         pickle.dump(test, f)
+    print('[INFO] Saving training set...')
+    with open('../train.pkl', 'wb') as f:
+        pickle.dump(train, f)
 
 if __name__ == "__main__":
     main()

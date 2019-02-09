@@ -8,17 +8,17 @@ pip3 install -r requirements.txt
 if [ ! -d data/iac_v1.1 ]; then
     # get dataset and code
     wget http://nldslab.soe.ucsc.edu/iac/iac_v1.1.zip && unzip -C data && rm iac_v1.1.zip
-    cp load_iac.py data/iac_v1.1/code
 fi
 
 # load dataset into python-loadable
 if [ ! -d data/iac ]; then
     # pickle dump concise dataset
+    cp load_iac.py data/iac_v1.1/code
     cd data/iac_v1.1/code && python load_iac.py
 
     # restructure data folder
-    cd ../../ mkdir data/iac
-    mv data/iac_v1.1/*pkl data/iac
+    cd ../../ && mkdir iac
+    mv iac_v1.1/*pkl iac
 fi
 
 # perform preprocessing
