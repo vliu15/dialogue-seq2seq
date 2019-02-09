@@ -30,15 +30,15 @@ def main():
     train = data[total//10:]
     val = data[total//20:total//10]
     test = data[:total//20]
-    print("[INFO] Data split into {}, {}, {} samples for training, validation, and testing.".format(len(train), len(val), len(test)))
+    print("[Info] Data split into {}, {}, {} samples for training, validation, and testing.".format(len(train), len(val), len(test)))
 
-    print('[INFO] Saving validation set...')
+    print('[Info] Saving validation set...')
     with open('../val.pkl', 'wb') as f:
         pickle.dump(val, f)
-    print('[INFO] Saving testing set...')
+    print('[Info Saving testing set...')
     with open('../test.pkl', 'wb') as f:
         pickle.dump(test, f)
-    print('[INFO] Saving training set...')
+    print('[Info] Saving training set...')
     with open('../train.pkl', 'wb') as f:
         pickle.dump(train, f)
 
