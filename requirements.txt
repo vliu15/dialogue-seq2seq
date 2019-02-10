@@ -1,5 +1,8 @@
+# for python2
+nltk
+
+# for python3
 torch
 torchvision
 tqdm
 numpy
-nltk
