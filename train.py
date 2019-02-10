@@ -63,15 +63,22 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
 
     for batch in tqdm(
             training_data, mininterval=2,
-            desc='  - (Training)   ', leave=False):
+            desc='  - (Training / Batches)   ', leave=False):
 
         # prepare data
         src_seq, src_pos, tgt_seq, tgt_pos = map(lambda x: x.to(device), batch)
-        gold = tgt_seq[:, 1:]
+        n_steps = src_seq.size(1)
+        gold = tgt_seq[:, :, 1:]
 
         # forward
         optimizer.zero_grad()
-        pred = model(src_seq, src_pos, tgt_seq, tgt_pos)
+        preds = []
+        for i in tqdm(range(n_steps),
+            desc='  - (Training / Time-Steps)   ', leave=False):
+            pred = model(
+                src_seq[:, i, :].squeeze(1), src_pos[:, i, :].squeeze(1),
+                tgt_seq[:, i, :].squeeze(1), tgt_pos[:, i, :].squeeze(1))
+            preds.append(pred)
 
         # backward
         loss, n_correct = cal_performance(pred, gold, smoothing=smoothing)
@@ -104,14 +111,20 @@ def eval_epoch(model, validation_data, device):
     with torch.no_grad():
         for batch in tqdm(
                 validation_data, mininterval=2,
-                desc='  - (Validation) ', leave=False):
+                desc='  - (Validation / Batches) ', leave=False):
 
             # prepare data
             src_seq, src_pos, tgt_seq, tgt_pos = map(lambda x: x.to(device), batch)
-            gold = tgt_seq[:, 1:]
+            gold = tgt_seq[:, :, 1:]
 
             # forward
-            pred = model(src_seq, src_pos, tgt_seq, tgt_pos)
+            preds = []
+            for i in tqdm(range(n_steps),
+                desc='  - (Validation / Time-Steps)   ', leave=False):
+                pred = model(
+                    src_seq[:, i, :].squeeze(1), src_pos[:, i, :].squeeze(1),
+                    tgt_seq[:, i, :].squeeze(1), tgt_pos[:, i, :].squeeze(1))
+                preds.append(pred)
             loss, n_correct = cal_performance(pred, gold, smoothing=False)
 
             # note keeping
@@ -225,7 +238,8 @@ def main():
 
     #========= Loading Dataset =========#
     data = torch.load(opt.data)
-    opt.max_token_seq_len = data['settings'].max_token_seq_len
+    opt.max_disc_len = data['settings'].max_disc_len
+    opt.max_post_len = data['settings'].max_token_post_len
 
     training_data, validation_data = prepare_dataloaders(data, opt)
 
@@ -243,7 +257,7 @@ def main():
     transformer = Transformer(
         opt.src_vocab_size,
         opt.tgt_vocab_size,
-        opt.max_token_seq_len,
+        opt.max_post_len,
         tgt_emb_prj_weight_sharing=opt.proj_share_weight,
         emb_src_tgt_weight_sharing=opt.embs_share_weight,
         d_k=opt.d_k,
