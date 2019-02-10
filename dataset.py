@@ -13,17 +13,24 @@ def paired_collate_fn(insts):
 def collate_fn(insts):
     ''' Pad the instance to the max seq length in batch '''
 
-    max_len = max(len(inst) for inst in insts)
+    max_disc_len = max(len(disc) for disc in insts)
+    max_post_len = max(len(post) for disc in insts for post in disc)
 
-    batch_seq = np.array([
-        inst + [Constants.PAD] * (max_len - len(inst))
-        for inst in insts])
+    # pad posts in insts
+    pad_posts = np.array([
+        [post + [Constants.PAD] * (max_post_len - len(post))
+        for post in disc] for disc in insts])
+
+    # pad discs in insts
+    pad_discs = np.array([
+        disc + [[Constants.PAD] * max_post_len] * (max_disc_len - len(disc))
+        for disc in insts])
 
     batch_pos = np.array([
-        [pos_i+1 if w_i != Constants.PAD else 0
-         for pos_i, w_i in enumerate(inst)] for inst in batch_seq])
+        [[pos_i+1 if w_i != Constants.PAD else 0 for pos_i, w_i in enumerate(post)]
+         for post in disc] disc in pad_discs])
 
-    batch_seq = torch.LongTensor(batch_seq)
+    batch_seq = torch.LongTensor(pad_discs)
     batch_pos = torch.LongTensor(batch_pos)
 
     return batch_seq, batch_pos
