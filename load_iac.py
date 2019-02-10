@@ -35,7 +35,7 @@ def main():
     print('[Info] Saving validation set...')
     with open('../val.pkl', 'wb') as f:
         pickle.dump(val, f)
-    print('[Info Saving testing set...')
+    print('[Info] Saving testing set...')
     with open('../test.pkl', 'wb') as f:
         pickle.dump(test, f)
     print('[Info] Saving training set...')
