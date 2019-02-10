@@ -169,24 +169,24 @@ def main():
     opt.max_token_post_len = opt.max_post_len + 2 # include the <s> and </s>
 
     ##-- training set
-    print("[INFO] Loading training set...")
+    print("[Info] Loading training set...")
     with open(opt.train_file, 'rb') as f:
         train = pickle.load(f)
     train_src_word_insts, train_tgt_word_insts = read_instances(
         train, opt.max_post_len, opt.max_disc_len, opt.keep_case, 'train')
     # prune for mismatches and empty instances / sequences
-    print("[INFO] Pruning empty sentences and src/tgt mismatches...")
+    print("[Info] Pruning empty sentences and src/tgt mismatches...")
     train_src_word_insts, train_tgt_word_insts = prune(
         train_src_word_insts, train_tgt_word_insts, 'training')
     
     ##-- validation set
-    print("Loading validation set...")
+    print("[Info] Loading validation set...")
     with open(opt.valid_file, 'rb') as f:
         val = pickle.load(f)
     val_src_word_insts, val_tgt_word_insts = read_instances(
         val, opt.max_post_len, opt.max_disc_len, opt.keep_case, 'valid')
     # prune for mismatches and empty instances / sequences
-    print("[INFO] Pruning empty sentences and src/tgt mismatches...")
+    print("[Info] Pruning empty sentences and src/tgt mismatches...")
     val_src_word_insts, val_tgt_word_insts = prune(
         val_src_word_insts, val_tgt_word_insts, 'validation')
 
