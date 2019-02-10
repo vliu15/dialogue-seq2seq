@@ -7,7 +7,7 @@ pip3 install -r requirements.txt
 # download iacorpus dataset
 if [ ! -d data/iac_v1.1 ]; then
     # get dataset and code
-    wget http://nldslab.soe.ucsc.edu/iac/iac_v1.1.zip && unzip -C data && rm iac_v1.1.zip
+    wget http://nldslab.soe.ucsc.edu/iac/iac_v1.1.zip && unzip iac_v1.1.zip -d data && rm iac_v1.1.zip
 fi
 
 # load dataset into python-loadable
