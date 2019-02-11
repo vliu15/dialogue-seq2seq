@@ -73,6 +73,7 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
         # forward
         optimizer.zero_grad()
         preds = []
+        # iterate through time steps
         for i in tqdm(range(n_steps),
             desc='  - (Training / Time-Steps)   ', leave=False):
             pred = model(
@@ -81,7 +82,14 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
             preds.append(pred)
 
         # backward
-        loss, n_correct = cal_performance(pred, gold, smoothing=smoothing)
+        loss = 0
+        n_correct = 0
+        for i in range(n_steps):
+            loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=smoothing)
+            # use total loss
+            loss += loss_
+            # track total number of correct words
+            n_correct += n_correct_
         loss.backward()
 
         # update parameters
@@ -90,10 +98,11 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
         # note keeping
         total_loss += loss.item()
 
-        non_pad_mask = gold.ne(Constants.PAD)
-        n_word = non_pad_mask.sum().item()
-        n_word_total += n_word
-        n_word_correct += n_correct
+        for i in range(n_steps):
+            non_pad_mask = gold[:, i, :].squeeze(1).ne(Constants.PAD)
+            n_word = non_pad_mask.sum().item()
+            n_word_total += n_word
+            n_word_correct += n_correct
 
     loss_per_word = total_loss/n_word_total
     accuracy = n_word_correct/n_word_total
@@ -115,6 +124,7 @@ def eval_epoch(model, validation_data, device):
 
             # prepare data
             src_seq, src_pos, tgt_seq, tgt_pos = map(lambda x: x.to(device), batch)
+            n_steps = src_pos.size(1)
             gold = tgt_seq[:, :, 1:]
 
             # forward
@@ -125,15 +135,23 @@ def eval_epoch(model, validation_data, device):
                     src_seq[:, i, :].squeeze(1), src_pos[:, i, :].squeeze(1),
                     tgt_seq[:, i, :].squeeze(1), tgt_pos[:, i, :].squeeze(1))
                 preds.append(pred)
-            loss, n_correct = cal_performance(pred, gold, smoothing=False)
+
+            # loss per timestep
+            loss = 0
+            n_correct = 0
+            for i in range(n_steps):
+                loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=False)
+                loss += loss_
+                n_correct += n_correct_
 
             # note keeping
             total_loss += loss.item()
 
-            non_pad_mask = gold.ne(Constants.PAD)
-            n_word = non_pad_mask.sum().item()
-            n_word_total += n_word
-            n_word_correct += n_correct
+            for i in range(n_steps):
+                non_pad_mask = gold[:, i, :].squeeze(1).ne(Constants.PAD)
+                n_word = non_pad_mask.sum().item()
+                n_word_total += n_word
+                n_word_correct += n_correct
 
     loss_per_word = total_loss/n_word_total
     accuracy = n_word_correct/n_word_total
