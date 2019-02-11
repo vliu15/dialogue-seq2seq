@@ -109,7 +109,8 @@ class Session(nn.Module):
         self.attn = AttentionLayer(d_hidden, d_model)
 
     def forward(self, enc_output):
-        self.h, self.c = self.memory(enc_output, (self.h, self.c))
+        features, _ = torch.max(enc_output, dim=1)
+        self.h, self.c = self.memory(features, (self.h, self.c))
         ses_output = self.attn(enc_output, self.h)
 
         return ses_output
@@ -221,7 +222,8 @@ class Transformer(nn.Module):
         tgt_seq, tgt_pos = tgt_seq[:, :-1], tgt_pos[:, :-1]
 
         enc_output, *_ = self.encoder(src_seq, src_pos)
-        dec_output, *_ = self.decoder(tgt_seq, tgt_pos, src_seq, enc_output)
+        ses_output = self.session(enc_output)
+        dec_output, *_ = self.decoder(tgt_seq, tgt_pos, src_seq, ses_output)
         seq_logit = self.tgt_word_prj(dec_output) * self.x_logit_scale
 
         return seq_logit.view(-1, seq_logit.size(2))

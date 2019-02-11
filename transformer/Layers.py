@@ -1,4 +1,5 @@
 ''' Define the Layers '''
+import torch
 import torch.nn as nn
 from transformer.SubLayers import MultiHeadAttention, PositionwiseFeedForward
 
@@ -31,9 +32,8 @@ class AttentionLayer(nn.Module):
         nn.init.xavier_normal_(self.attn_weight.weight)
 
     def forward(self, enc_output, ses_hidden):
-        i, j, _ = enc_output.size()
-        attn_distr = torch.matmul(enc_output, self.attn_weight(ses_hidden))
-        attn_distr = attn_distr.unsqueeze(0).repeat(i, j, 1)
+        attn_vec = self.attn_weight(ses_hidden).unsqueeze(-1)
+        attn_distr = torch.matmul(enc_output, attn_vec).repeat(1, 1, enc_output.size(-1))
         attn_output = attn_distr * enc_output
 
         return attn_output
