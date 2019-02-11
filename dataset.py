@@ -17,18 +17,17 @@ def collate_fn(insts):
     max_post_len = max(len(post) for disc in insts for post in disc)
 
     # pad posts in insts
-    pad_posts = np.array([
-        [post + [Constants.PAD] * (max_post_len - len(post))
-        for post in disc] for disc in insts])
+    pad_posts = [[post + [Constants.PAD] * (max_post_len - len(post))
+        for post in disc] for disc in insts]
 
     # pad discs in insts
     pad_discs = np.array([
         disc + [[Constants.PAD] * max_post_len] * (max_disc_len - len(disc))
-        for disc in insts])
+        for disc in pad_posts])
 
     batch_pos = np.array([
         [[pos_i+1 if w_i != Constants.PAD else 0 for pos_i, w_i in enumerate(post)]
-         for post in disc] disc in pad_discs])
+         for post in disc] for disc in pad_discs])
 
     batch_seq = torch.LongTensor(pad_discs)
     batch_pos = torch.LongTensor(batch_pos)
