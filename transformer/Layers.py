@@ -24,6 +24,20 @@ class EncoderLayer(nn.Module):
 
         return enc_output, enc_slf_attn
 
+class AttentionLayer(nn.Module):
+    def __init__(self, d_hidden, d_model):
+        super().__init__()
+        self.attn_weight = nn.Linear(d_hidden, d_model)
+        nn.init.xavier_normal_(self.attn_weight.weight)
+
+    def forward(self, enc_output, ses_hidden):
+        i, j, _ = enc_output.size()
+        attn_distr = torch.matmul(enc_output, self.attn_weight(ses_hidden))
+        attn_distr = attn_distr.unsqueeze(0).repeat(i, j, 1)
+        attn_output = attn_distr * enc_output
+
+        return attn_output
+
 
 class DecoderLayer(nn.Module):
     ''' Compose with three layers '''

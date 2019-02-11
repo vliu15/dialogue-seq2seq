@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import transformer.Constants as Constants
-from transformer.Layers import EncoderLayer, DecoderLayer
+from transformer.Layers import EncoderLayer, DecoderLayer, AttentionLayer
 
 __author__ = "Yu-Hsiang Huang"
 
@@ -98,6 +98,23 @@ class Encoder(nn.Module):
             return enc_output, enc_slf_attn_list
         return enc_output,
 
+class Session(nn.Module):
+    def __init__(self, d_model, d_hidden, batch_size):
+        super().__init__()
+        self.memory = nn.LSTMCell(d_model, d_hidden)
+        self.h = torch.Tensor(batch_size, d_hidden)
+        self.c = torch.Tensor(batch_size, d_hidden)
+        nn.init.xavier_normal_(self.h)
+        nn.init.xavier_normal_(self.c)
+        self.attn = AttentionLayer(d_hidden, d_model)
+
+    def forward(self, enc_output):
+        self.h, self.c = self.memory(enc_output, (self.h, self.c))
+        ses_output = self.attn(enc_output, self.h)
+
+        return ses_output
+
+
 class Decoder(nn.Module):
     ''' A decoder model with self attention mechanism. '''
 
@@ -157,8 +174,8 @@ class Transformer(nn.Module):
 
     def __init__(
             self,
-            n_src_vocab, n_tgt_vocab, len_max_seq,
-            d_word_vec=512, d_model=512, d_inner=2048,
+            n_src_vocab, n_tgt_vocab, len_max_seq, batch_size,
+            d_word_vec=512, d_model=512, d_inner=2048, d_hidden=512,
             n_layers=6, n_head=8, d_k=64, d_v=64, dropout=0.1,
             tgt_emb_prj_weight_sharing=True,
             emb_src_tgt_weight_sharing=True):
@@ -170,6 +187,8 @@ class Transformer(nn.Module):
             d_word_vec=d_word_vec, d_model=d_model, d_inner=d_inner,
             n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
             dropout=dropout)
+
+        self.session = Session(d_model, d_hidden, batch_size)
 
         self.decoder = Decoder(
             n_tgt_vocab=n_tgt_vocab, len_max_seq=len_max_seq,

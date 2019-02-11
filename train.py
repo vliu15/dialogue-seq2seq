@@ -90,7 +90,7 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
             loss += loss_
             # track total number of correct words
             n_correct += n_correct_
-        loss.backward()
+        loss.backward(retain_graph=True)
 
         # update parameters
         optimizer.step_and_update_lr()
@@ -234,6 +234,7 @@ def main():
     parser.add_argument('-d_inner_hid', type=int, default=2048)
     parser.add_argument('-d_k', type=int, default=64)
     parser.add_argument('-d_v', type=int, default=64)
+    parser.add_argument('-d_hidden', type=int, default=512)
 
     parser.add_argument('-n_head', type=int, default=8)
     parser.add_argument('-n_layers', type=int, default=6)
@@ -276,6 +277,7 @@ def main():
         opt.src_vocab_size,
         opt.tgt_vocab_size,
         opt.max_post_len,
+        opt.batch_size,
         tgt_emb_prj_weight_sharing=opt.proj_share_weight,
         emb_src_tgt_weight_sharing=opt.embs_share_weight,
         d_k=opt.d_k,
@@ -283,6 +285,7 @@ def main():
         d_model=opt.d_model,
         d_word_vec=opt.d_word_vec,
         d_inner=opt.d_inner_hid,
+        d_hidden=opt.d_hidden,
         n_layers=opt.n_layers,
         n_head=opt.n_head,
         dropout=opt.dropout).to(device)
