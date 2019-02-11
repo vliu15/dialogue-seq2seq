@@ -29,8 +29,8 @@ def collate_fn(insts):
         [[pos_i+1 if w_i != Constants.PAD else 0 for pos_i, w_i in enumerate(post)]
          for post in disc] for disc in pad_discs])
 
-    batch_seq = torch.from_numpy(pad_discs)
-    batch_pos = torch.from_numpy(batch_pos)
+    batch_seq = torch.LongTensor(pad_discs)
+    batch_pos = torch.LongTensor(batch_pos)
 
     return batch_seq, batch_pos
 
