@@ -72,6 +72,7 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
 
         # forward
         optimizer.zero_grad()
+        model.session.init_hidden()
         preds = []
         # iterate through time steps
         for i in tqdm(range(n_steps),
@@ -91,7 +92,7 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
             loss += loss_
             # track total number of correct words
             n_correct += n_correct_
-        loss.backward(retain_graph=True)
+        loss.backward()
 
         # update parameters
         optimizer.step_and_update_lr()
@@ -228,20 +229,20 @@ def main():
     parser.add_argument('-data', required=True)
 
     parser.add_argument('-epoch', type=int, default=10)
-    parser.add_argument('-batch_size', type=int, default=64)
+    parser.add_argument('-batch_size', type=int, default=32)
 
     #parser.add_argument('-d_word_vec', type=int, default=512)
-    parser.add_argument('-d_model', type=int, default=512)
-    parser.add_argument('-d_inner_hid', type=int, default=2048)
-    parser.add_argument('-d_k', type=int, default=64)
-    parser.add_argument('-d_v', type=int, default=64)
+    parser.add_argument('-d_model', type=int, default=128)
+    parser.add_argument('-d_inner_hid', type=int, default=512)
+    parser.add_argument('-d_k', type=int, default=16)
+    parser.add_argument('-d_v', type=int, default=16)
     parser.add_argument('-d_hidden', type=int, default=512)
 
     parser.add_argument('-n_head', type=int, default=8)
-    parser.add_argument('-n_layers', type=int, default=6)
+    parser.add_argument('-n_layers', type=int, default=2)
     parser.add_argument('-n_warmup_steps', type=int, default=4000)
 
-    parser.add_argument('-dropout', type=float, default=0.1)
+    parser.add_argument('-dropout', type=float, default=0.2)
     parser.add_argument('-embs_share_weight', action='store_true')
     parser.add_argument('-proj_share_weight', action='store_true')
 
@@ -311,6 +312,7 @@ def prepare_dataloaders(data, opt):
         num_workers=2,
         batch_size=opt.batch_size,
         collate_fn=paired_collate_fn,
+        drop_last=True,
         shuffle=True)
 
     valid_loader = torch.utils.data.DataLoader(
@@ -321,7 +323,8 @@ def prepare_dataloaders(data, opt):
             tgt_insts=data['valid']['tgt']),
         num_workers=2,
         batch_size=opt.batch_size,
-        collate_fn=paired_collate_fn)
+        collate_fn=paired_collate_fn,
+        drop_last=True)
     return train_loader, valid_loader
 
 

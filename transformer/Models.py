@@ -101,12 +101,18 @@ class Encoder(nn.Module):
 class Session(nn.Module):
     def __init__(self, d_model, d_hidden, batch_size):
         super().__init__()
+        self.batch_size = batch_size
+        self.d_hidden = d_hidden
+
         self.memory = nn.LSTMCell(d_model, d_hidden)
-        self.h = torch.Tensor(batch_size, d_hidden)
-        self.c = torch.Tensor(batch_size, d_hidden)
+        self.init_hidden()
+        self.attn = AttentionLayer(d_hidden, d_model)
+
+    def init_hidden(self):
+        self.h = torch.Tensor(self.batch_size, self.d_hidden)
+        self.c = torch.Tensor(self.batch_size, self.d_hidden)
         nn.init.xavier_normal_(self.h)
         nn.init.xavier_normal_(self.c)
-        self.attn = AttentionLayer(d_hidden, d_model)
 
     def forward(self, enc_output):
         features, _ = torch.max(enc_output, dim=1)
