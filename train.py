@@ -11,6 +11,7 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data
+import numpy as np
 import transformer.Constants as Constants
 from dataset import TranslationDataset, paired_collate_fn
 from transformer.Models import Transformer
@@ -184,16 +185,16 @@ def train(model, training_data, validation_data, optimizer, device, opt):
         train_loss, train_accu = train_epoch(
             model, training_data, optimizer, device, smoothing=opt.label_smoothing)
         print('  - (Training)   ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
-              'loss/word: {train_loss:8.5f}, elapse: {elapse:3.3f} min'.format(
+              'loss/word: {loss:8.5f}, elapse: {elapse:3.3f} min'.format(
                   ppl=math.exp(min(train_loss, 100)), accu=100*train_accu,
-                  elapse=(time.time()-start)/60))
+                  loss=train_loss, elapse=(time.time()-start)/60))
 
         start = time.time()
         valid_loss, valid_accu = eval_epoch(model, validation_data, device)
         print('  - (Validation) ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
-                'loss/word: {train_loss:8.5f}, elapse: {elapse:3.3f} min'.format(
+                'loss/word: {loss:8.5f}, elapse: {elapse:3.3f} min'.format(
                     ppl=math.exp(min(valid_loss, 100)), accu=100*valid_accu,
-                    elapse=(time.time()-start)/60))
+                    loss=valid_loss, elapse=(time.time()-start)/60))
 
         valid_accus += [valid_accu]
 
@@ -292,6 +293,10 @@ def main():
         n_layers=opt.n_layers,
         n_head=opt.n_head,
         dropout=opt.dropout).to(device)
+
+    model_parameters = filter(lambda p: p.requires_grad, transformer.parameters())
+    n_params = sum([np.prod(p.size()) for p in model_parameters])
+    print('Total number of parameters: {n:3.3}M'.format(n=n_params/1000000.0))
 
     optimizer = ScheduledOptim(
         optim.Adam(
