@@ -109,8 +109,12 @@ class Session(nn.Module):
         self.attn = AttentionLayer(d_hidden, d_model)
 
     def init_hidden(self):
-        self.h = torch.Tensor(self.batch_size, self.d_hidden)
-        self.c = torch.Tensor(self.batch_size, self.d_hidden)
+        try:
+            self.h = torch.Tensor(self.batch_size, self.d_hidden).cuda()
+            self.c = torch.Tensor(self.batch_size, self.d_hidden).cuda()
+        except:
+            self.h = torch.Tensor(self.batch_size, self.d_hidden)
+            self.c = torch.Tensor(self.batch_size, self.d_hidden)
         nn.init.xavier_normal_(self.h)
         nn.init.xavier_normal_(self.c)
 
