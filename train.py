@@ -230,7 +230,7 @@ def main():
     parser.add_argument('-data', required=True)
 
     parser.add_argument('-epoch', type=int, default=10)
-    parser.add_argument('-batch_size', type=int, default=8)
+    parser.add_argument('-batch_size', type=int, default=4)
     parser.add_argument('-lr', type=float, default=1e-4)
 
     #parser.add_argument('-d_word_vec', type=int, default=512)

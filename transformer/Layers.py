@@ -30,10 +30,11 @@ class AttentionLayer(nn.Module):
         super().__init__()
         self.attn_weight = nn.Linear(d_hidden, d_model)
         nn.init.xavier_normal_(self.attn_weight.weight)
+        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, enc_output, ses_hidden):
         attn_vec = self.attn_weight(ses_hidden).unsqueeze(-1)
-        attn_distr = torch.matmul(enc_output, attn_vec).repeat(1, 1, enc_output.size(-1))
+        attn_distr = self.softmax(torch.bmm(enc_output, attn_vec)).repeat(1, 1, enc_output.size(-1))
         attn_output = attn_distr * enc_output
 
         return attn_output
