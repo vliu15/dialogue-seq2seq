@@ -22,7 +22,7 @@ def collate_fn(insts):
 
     # pad discs in insts
     pad_discs = np.array([
-        disc + [Constants.BOS + [Constants.PAD] * (max_post_len - 1)] * (max_disc_len - len(disc))
+        disc + [[Constants.BOS] + [Constants.PAD] * (max_post_len - 1)] * (max_disc_len - len(disc))
         for disc in pad_posts])
 
     batch_pos = np.array([
