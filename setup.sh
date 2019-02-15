@@ -21,4 +21,4 @@ if [ ! -d data/iac ]; then
 fi
 
 # perform preprocessing
-python preprocess.py -train_file data/iac/train.pkl -valid_file data/iac/val.pkl -save_dir data/iac
+python preprocess.py -train_file data/iac/train.pkl -valid_file data/iac/val.pkl -save_dir data/iac -share_vocab
