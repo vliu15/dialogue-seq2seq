@@ -11,6 +11,7 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data
+import numpy as np
 import transformer.Constants as Constants
 from dataset import TranslationDataset, paired_collate_fn
 from transformer.Models import Transformer
@@ -72,7 +73,9 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
 
         # forward
         optimizer.zero_grad()
+        model.session.init_hidden()
         preds = []
+        # iterate through time steps
         for i in tqdm(range(n_steps),
             desc='  - (Training / Time-Steps)   ', leave=False):
             pred = model(
@@ -81,7 +84,15 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
             preds.append(pred)
 
         # backward
-        loss, n_correct = cal_performance(pred, gold, smoothing=smoothing)
+        loss = 0
+        n_correct = 0
+        for i in tqdm(range(n_steps),
+            desc='  - (Training / Eval Loss)   ', leave=False):
+            loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=smoothing)
+            # use total loss
+            loss += loss_
+            # track total number of correct words
+            n_correct += n_correct_
         loss.backward()
 
         # update parameters
@@ -89,11 +100,8 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
 
         # note keeping
         total_loss += loss.item()
-
-        non_pad_mask = gold.ne(Constants.PAD)
-        n_word = non_pad_mask.sum().item()
-        n_word_total += n_word
         n_word_correct += n_correct
+        n_word_total += gold.ne(Constants.PAD).sum().item()
 
     loss_per_word = total_loss/n_word_total
     accuracy = n_word_correct/n_word_total
@@ -115,6 +123,7 @@ def eval_epoch(model, validation_data, device):
 
             # prepare data
             src_seq, src_pos, tgt_seq, tgt_pos = map(lambda x: x.to(device), batch)
+            n_steps = src_pos.size(1)
             gold = tgt_seq[:, :, 1:]
 
             # forward
@@ -125,15 +134,19 @@ def eval_epoch(model, validation_data, device):
                     src_seq[:, i, :].squeeze(1), src_pos[:, i, :].squeeze(1),
                     tgt_seq[:, i, :].squeeze(1), tgt_pos[:, i, :].squeeze(1))
                 preds.append(pred)
-            loss, n_correct = cal_performance(pred, gold, smoothing=False)
+
+            # loss per timestep
+            loss = 0
+            n_correct = 0
+            for i in range(n_steps):
+                loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=False)
+                loss += loss_
+                n_correct += n_correct_
 
             # note keeping
             total_loss += loss.item()
-
-            non_pad_mask = gold.ne(Constants.PAD)
-            n_word = non_pad_mask.sum().item()
-            n_word_total += n_word
             n_word_correct += n_correct
+            n_word_total += gold.ne(Constants.PAD).sum().item()
 
     loss_per_word = total_loss/n_word_total
     accuracy = n_word_correct/n_word_total
@@ -164,16 +177,16 @@ def train(model, training_data, validation_data, optimizer, device, opt):
         train_loss, train_accu = train_epoch(
             model, training_data, optimizer, device, smoothing=opt.label_smoothing)
         print('  - (Training)   ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
-              'elapse: {elapse:3.3f} min'.format(
+              'loss/word: {loss:8.5f}, elapse: {elapse:3.3f} min'.format(
                   ppl=math.exp(min(train_loss, 100)), accu=100*train_accu,
-                  elapse=(time.time()-start)/60))
+                  loss=train_loss, elapse=(time.time()-start)/60))
 
         start = time.time()
         valid_loss, valid_accu = eval_epoch(model, validation_data, device)
         print('  - (Validation) ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
-                'elapse: {elapse:3.3f} min'.format(
+                'loss/word: {loss:8.5f}, elapse: {elapse:3.3f} min'.format(
                     ppl=math.exp(min(valid_loss, 100)), accu=100*valid_accu,
-                    elapse=(time.time()-start)/60))
+                    loss=valid_loss, elapse=(time.time()-start)/60))
 
         valid_accus += [valid_accu]
 
@@ -209,19 +222,21 @@ def main():
     parser.add_argument('-data', required=True)
 
     parser.add_argument('-epoch', type=int, default=10)
-    parser.add_argument('-batch_size', type=int, default=64)
+    parser.add_argument('-batch_size', type=int, default=4)
+    parser.add_argument('-lr', type=float, default=1e-3)
 
     #parser.add_argument('-d_word_vec', type=int, default=512)
     parser.add_argument('-d_model', type=int, default=512)
-    parser.add_argument('-d_inner_hid', type=int, default=2048)
+    parser.add_argument('-d_inner_hid', type=int, default=512)
     parser.add_argument('-d_k', type=int, default=64)
     parser.add_argument('-d_v', type=int, default=64)
+    parser.add_argument('-d_hidden', type=int, default=512)
 
     parser.add_argument('-n_head', type=int, default=8)
     parser.add_argument('-n_layers', type=int, default=6)
-    parser.add_argument('-n_warmup_steps', type=int, default=4000)
+    parser.add_argument('-n_warmup_steps', type=int, default=1000)
 
-    parser.add_argument('-dropout', type=float, default=0.1)
+    parser.add_argument('-dropout', type=float, default=0.2)
     parser.add_argument('-embs_share_weight', action='store_true')
     parser.add_argument('-proj_share_weight', action='store_true')
 
@@ -258,6 +273,7 @@ def main():
         opt.src_vocab_size,
         opt.tgt_vocab_size,
         opt.max_post_len,
+        opt.batch_size,
         tgt_emb_prj_weight_sharing=opt.proj_share_weight,
         emb_src_tgt_weight_sharing=opt.embs_share_weight,
         d_k=opt.d_k,
@@ -265,15 +281,20 @@ def main():
         d_model=opt.d_model,
         d_word_vec=opt.d_word_vec,
         d_inner=opt.d_inner_hid,
+        d_hidden=opt.d_hidden,
         n_layers=opt.n_layers,
         n_head=opt.n_head,
         dropout=opt.dropout).to(device)
+
+    model_parameters = filter(lambda p: p.requires_grad, transformer.parameters())
+    n_params = sum([np.prod(p.size()) for p in model_parameters])
+    print('Total number of parameters: {n:3.3}M'.format(n=n_params/1000000.0))
 
     optimizer = ScheduledOptim(
         optim.Adam(
             filter(lambda x: x.requires_grad, transformer.parameters()),
             betas=(0.9, 0.98), eps=1e-09),
-        opt.d_model, opt.n_warmup_steps)
+        opt.d_model, opt.n_warmup_steps, lr=opt.lr)
 
     train(transformer, training_data, validation_data, optimizer, device ,opt)
 
@@ -289,6 +310,7 @@ def prepare_dataloaders(data, opt):
         num_workers=2,
         batch_size=opt.batch_size,
         collate_fn=paired_collate_fn,
+        drop_last=True,
         shuffle=True)
 
     valid_loader = torch.utils.data.DataLoader(
@@ -299,7 +321,8 @@ def prepare_dataloaders(data, opt):
             tgt_insts=data['valid']['tgt']),
         num_workers=2,
         batch_size=opt.batch_size,
-        collate_fn=paired_collate_fn)
+        collate_fn=paired_collate_fn,
+        drop_last=True)
     return train_loader, valid_loader
 
 

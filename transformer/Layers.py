@@ -1,4 +1,5 @@
 ''' Define the Layers '''
+import torch
 import torch.nn as nn
 from transformer.SubLayers import MultiHeadAttention, PositionwiseFeedForward
 
@@ -23,6 +24,20 @@ class EncoderLayer(nn.Module):
         enc_output *= non_pad_mask
 
         return enc_output, enc_slf_attn
+
+class AttentionLayer(nn.Module):
+    def __init__(self, d_hidden, d_model):
+        super().__init__()
+        self.attn_weight = nn.Linear(d_hidden, d_model)
+        nn.init.xavier_normal_(self.attn_weight.weight)
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, enc_output, ses_hidden):
+        attn_vec = self.attn_weight(ses_hidden).unsqueeze(-1)
+        attn_distr = self.softmax(torch.bmm(enc_output, attn_vec)).repeat(1, 1, enc_output.size(-1))
+        attn_output = attn_distr * enc_output
+
+        return attn_output
 
 
 class DecoderLayer(nn.Module):
