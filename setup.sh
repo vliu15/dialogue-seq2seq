@@ -12,7 +12,7 @@ fi
 if [ ! -d data/iac ]; then
     # pickle dump concise dataset
     cp load_iac.py data/iac_v1.1/code
-    cd data/iac_v1.1/code && python2 load_iac.py
+    cd data/iac_v1.1/code && python load_iac.py
 
     # restructure data folder
     cd ../../ && mkdir iac
@@ -21,4 +21,4 @@ if [ ! -d data/iac ]; then
 fi
 
 # perform preprocessing
-python preprocess.py -train_file data/iac/train.pkl -valid_file data/iac/val.pkl -save_dir data/iac -share_vocab
+python3 preprocess.py -train_file data/iac/train.pkl -valid_file data/iac/val.pkl -save_dir data/iac -share_vocab
