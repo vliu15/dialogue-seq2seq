@@ -22,7 +22,7 @@ sh setup.sh
 ### Training
 ```bash
 python train.py -data data/iac/train.data.pt -save_model trained \
-  -save_mode best -proj_share_weight -label_smoothing -no_cuda
+  -save_mode best -proj_share_weight -label_smoothing -embs_share_weight
 ```
 > If your source and target language share one common vocabulary, use the `-embs_share_weight` flag to enable the model to share source/target word embedding.
 
