@@ -101,11 +101,7 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
         # note keeping
         total_loss += loss.item()
         n_word_correct += n_correct
-
-        for i in range(n_steps):
-            non_pad_mask = gold[:, i, :].squeeze(1).ne(Constants.PAD)
-            n_word = non_pad_mask.sum().item()
-            n_word_total += n_word
+        n_word_total += gold.ne(Constants.PAD).sum().item()
 
     loss_per_word = total_loss/n_word_total
     accuracy = n_word_correct/n_word_total
@@ -150,11 +146,7 @@ def eval_epoch(model, validation_data, device):
             # note keeping
             total_loss += loss.item()
             n_word_correct += n_correct
-
-            for i in range(n_steps):
-                non_pad_mask = gold[:, i, :].squeeze(1).ne(Constants.PAD)
-                n_word = non_pad_mask.sum().item()
-                n_word_total += n_word
+            n_word_total += gold.ne(Constants.PAD).sum().item()
 
     loss_per_word = total_loss/n_word_total
     accuracy = n_word_correct/n_word_total
