@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # set up dependencies manually due to mixture of python2 and python3
+pip install nltk
+pip3 install torch torchvision numpy tqdm
 
 # download iacorpus dataset
 if [ ! -d data/iac_v1.1 ]; then
