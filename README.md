@@ -11,7 +11,7 @@ We borrow the code for the Transformer encoder and decoder from [this](https://g
 </p>
 
 ## Usage
-For Python2 and Python3 dependencies, see `requirements.txt`.
+For Python2 and Python3 dependencies, see `requirements.txt`. We assume that `python` and `pip` correspond to Python2, and `python3` and `pip3` correspond to Python3.
 
 ### Setup: Data / Preprocessing
 ```
@@ -21,13 +21,13 @@ sh setup.sh
 
 ### Training
 ```bash
-python train.py -data data/iac/train.data.pt -save_model trained \
+python3 train.py -data data/iac/train.data.pt -save_model trained \
   -save_mode best -proj_share_weight -label_smoothing -embs_share_weight
 ```
 > If your source and target language share one common vocabulary, use the `-embs_share_weight` flag to enable the model to share source/target word embedding.
 
 ### Testing
 ```bash
-python translate.py -model trained.chkpt -vocab data/iac/train.data.pt \
-  -src data/iac/test.pkl -no_cuda
+python3 translate.py -model trained.chkpt -vocab data/iac/train.data.pt \
+  -src data/iac/test.pkl
 ```
