@@ -4,6 +4,8 @@
 pip install nltk
 pip3 install torch torchvision numpy tqdm
 
+mkdir data
+
 # download iacorpus dataset
 if [ ! -d data/iac_v1.1 ]; then
     # get dataset and code
