@@ -121,9 +121,9 @@ class Session(nn.Module):
     def forward(self, enc_output):
         features, _ = torch.max(enc_output, dim=1)
         self.h, self.c = self.memory(features, (self.h, self.c))
-        ses_output = self.attn(enc_output, self.h)
+        ses_output, ses_attn_distr = self.attn(enc_output, self.h)
 
-        return ses_output
+        return ses_output, ses_attn_distr
 
 
 class Decoder(nn.Module):
@@ -232,7 +232,7 @@ class Transformer(nn.Module):
         tgt_seq, tgt_pos = tgt_seq[:, :-1], tgt_pos[:, :-1]
 
         enc_output, *_ = self.encoder(src_seq, src_pos)
-        ses_output = self.session(enc_output)
+        ses_output, *_ = self.session(enc_output)
         dec_output, *_ = self.decoder(tgt_seq, tgt_pos, src_seq, ses_output)
         seq_logit = self.tgt_word_prj(dec_output) * self.x_logit_scale
 
