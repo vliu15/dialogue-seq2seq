@@ -99,14 +99,14 @@ class Encoder(nn.Module):
         return enc_output,
 
 class Session(nn.Module):
-    def __init__(self, d_model, d_hidden, batch_size):
+    def __init__(self, d_model, d_hidden, batch_size, dropout=0.1):
         super().__init__()
         self.batch_size = batch_size
         self.d_hidden = d_hidden
 
         self.memory = nn.LSTMCell(d_model, d_hidden)
         self.init_hidden()
-        self.attn = AttentionLayer(d_hidden, d_model)
+        self.attn = AttentionLayer(d_hidden, d_model, dropout)
 
     def init_hidden(self):
         try:
@@ -199,7 +199,7 @@ class Transformer(nn.Module):
             n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
             dropout=dropout)
 
-        self.session = Session(d_model, d_hidden, batch_size)
+        self.session = Session(d_model, d_hidden, batch_size, dropout)
 
         self.decoder = Decoder(
             n_tgt_vocab=n_tgt_vocab, len_max_seq=len_max_seq,

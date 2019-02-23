@@ -91,7 +91,8 @@ class MultiplicativeAttention(nn.Module):
 
     def forward(self, enc_output, ses_hidden):
         attn_vec = self.attn_weight(ses_hidden).unsqueeze(-1)
-        attn_distr = self.softmax(torch.bmm(enc_output, attn_vec)).repeat(1, 1, enc_output.size(-1))
+        attn_distr = torch.bmm(enc_output, attn_vec).repeat(1, 1, enc_output.size(-1))
+        attn_distr = self.softmax(attn_distr)
         
         return attn_distr
 
@@ -105,7 +106,8 @@ class DotProductAttention(nn.Module):
     
     def forward(self, enc_output, ses_hidden):
         attn_vec = ses_hidden.unsqueeze(-1)
-        attn_distr = self.softmax(torch.bmm(enc_output, attn_vec)).repeat(1, 1, enc_output.size(-1))
+        attn_distr = torch.bmm(enc_output, attn_vec).repeat(1, 1, enc_output.size(-1))
+        attn_distr = self.softmax(attn_distr)
 
         return attn_distr
         

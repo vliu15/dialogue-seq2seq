@@ -27,16 +27,17 @@ class EncoderLayer(nn.Module):
         return enc_output, enc_slf_attn
 
 class AttentionLayer(nn.Module):
-    def __init__(self, d_hidden, d_model):
+    def __init__(self, d_hidden, d_model, dropout=0.1):
         super().__init__()
         if d_hidden != d_model:
             self.attn = MultiplicativeAttention(d_model, d_hidden)
         else:
             self.attn = DotProductAttention(d_model, d_hidden)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, enc_output, ses_hidden):
         attn_distr = self.attn(enc_output, ses_hidden)
-        attn_output = attn_distr * enc_output
+        attn_output = self.dropout(attn_distr * enc_output)
 
         return attn_output, attn_distr
 
