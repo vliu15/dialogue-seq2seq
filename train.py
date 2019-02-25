@@ -67,8 +67,10 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
             desc='  - (Training / Batches)   ', leave=False):
 
         # prepare data
+        # Each of src_seq, src_pos, tgt_seq, tgt_pos shapes are [batch_size, max_dis_len, max_post_len]
         src_seq, src_pos, tgt_seq, tgt_pos = map(lambda x: x.to(device), batch)
         n_steps = src_seq.size(1)
+        # Clip the target_seq for the BOS token
         gold = tgt_seq[:, :, 1:]
 
         # forward
@@ -88,6 +90,12 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
         n_correct = 0
         for i in tqdm(range(n_steps),
             desc='  - (Training / Eval Loss)   ', leave=False):
+
+            # Shapes: 
+            #   Preds[i]: [51, 8038], gold[:, i, :].squeeze(1): [torch.Size([1, 51])   
+            # If batch size not 1, then Shapes: 
+            #   Preds[i]: [102, 8038], gold[:, i, :].squeeze(1): [torch.Size([2, 51])   
+            # Gold gets flattened.
             loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=smoothing)
             # use total loss
             loss += loss_
