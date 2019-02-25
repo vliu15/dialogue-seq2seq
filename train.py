@@ -291,7 +291,7 @@ def main():
     print('Total number of parameters: {n:3.3}M'.format(n=n_params/1000000.0))
 
     optimizer = ScheduledOptim(
-        optim.Adam(model_parameters, betas=(0.9, 0.98), eps=1e-09),
+        optim.Adam(filter(lambda p: p.requires_grad, transformer.parameters()), betas=(0.9, 0.98), eps=1e-09),
         opt.d_model, 
         opt.n_warmup_steps, 
         lr=opt.lr
