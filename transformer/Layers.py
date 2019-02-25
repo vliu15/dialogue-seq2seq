@@ -1,7 +1,8 @@
 ''' Define the Layers '''
 import torch
 import torch.nn as nn
-from transformer.SubLayers import MultiHeadAttention, PositionwiseFeedForward
+from transformer.SubLayers import MultiHeadAttention, PositionwiseFeedForward, \
+    MultiplicativeAttention, DotProductAttention
 
 __author__ = "Yu-Hsiang Huang"
 
@@ -26,18 +27,19 @@ class EncoderLayer(nn.Module):
         return enc_output, enc_slf_attn
 
 class AttentionLayer(nn.Module):
-    def __init__(self, d_hidden, d_model):
+    def __init__(self, d_hidden, d_model, dropout=0.1):
         super().__init__()
-        self.attn_weight = nn.Linear(d_hidden, d_model)
-        nn.init.xavier_normal_(self.attn_weight.weight)
-        self.softmax = nn.Softmax(dim=1)
+        if d_hidden != d_model:
+            self.attn = MultiplicativeAttention(d_model, d_hidden)
+        else:
+            self.attn = DotProductAttention(d_model, d_hidden)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, enc_output, ses_hidden):
-        attn_vec = self.attn_weight(ses_hidden).unsqueeze(-1)
-        attn_distr = self.softmax(torch.bmm(enc_output, attn_vec)).repeat(1, 1, enc_output.size(-1))
-        attn_output = attn_distr * enc_output
+        attn_distr = self.attn(enc_output, ses_hidden)
+        attn_output = self.dropout(attn_distr * enc_output)
 
-        return attn_output
+        return attn_output, attn_distr
 
 
 class DecoderLayer(nn.Module):

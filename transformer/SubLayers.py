@@ -1,5 +1,6 @@
 ''' Define the sublayers in encoder/decoder layer '''
 import numpy as np
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformer.Modules import ScaledDotProductAttention
@@ -79,3 +80,34 @@ class PositionwiseFeedForward(nn.Module):
         output = self.dropout(output)
         output = self.layer_norm(output + residual)
         return output
+
+class MultiplicativeAttention(nn.Module):
+    ''' Multiplicative Attention layer '''
+
+    def __init__(self, d_model, d_hidden):
+        super().__init__()
+        self.attn_weight = nn.Linear(d_hidden, d_model)
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, enc_output, ses_hidden):
+        attn_vec = self.attn_weight(ses_hidden).unsqueeze(-1)
+        attn_distr = torch.bmm(enc_output, attn_vec).repeat(1, 1, enc_output.size(-1))
+        attn_distr = self.softmax(attn_distr)
+        
+        return attn_distr
+
+class DotProductAttention(nn.Module):
+    ''' Vanilla Dot Product Attention layer '''
+
+    def __init__(self, d_model, d_hidden):
+        super().__init__()
+        self.softmax = nn.Softmax(dim=1)
+        assert d_model == d_hidden
+    
+    def forward(self, enc_output, ses_hidden):
+        attn_vec = ses_hidden.unsqueeze(-1)
+        attn_distr = torch.bmm(enc_output, attn_vec).repeat(1, 1, enc_output.size(-1))
+        attn_distr = self.softmax(attn_distr)
+
+        return attn_distr
+        

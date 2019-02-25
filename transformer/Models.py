@@ -99,14 +99,14 @@ class Encoder(nn.Module):
         return enc_output,
 
 class Session(nn.Module):
-    def __init__(self, d_model, d_hidden, batch_size):
+    def __init__(self, d_model, d_hidden, batch_size, dropout=0.1):
         super().__init__()
         self.batch_size = batch_size
         self.d_hidden = d_hidden
 
         self.memory = nn.LSTMCell(d_model, d_hidden)
         self.init_hidden()
-        self.attn = AttentionLayer(d_hidden, d_model)
+        self.attn = AttentionLayer(d_hidden, d_model, dropout)
 
     def init_hidden(self):
         try:
@@ -121,9 +121,9 @@ class Session(nn.Module):
     def forward(self, enc_output):
         features, _ = torch.max(enc_output, dim=1)
         self.h, self.c = self.memory(features, (self.h, self.c))
-        ses_output = self.attn(enc_output, self.h)
+        ses_output, ses_attn_distr = self.attn(enc_output, self.h)
 
-        return ses_output
+        return ses_output, ses_attn_distr
 
 
 class Decoder(nn.Module):
@@ -199,7 +199,7 @@ class Transformer(nn.Module):
             n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
             dropout=dropout)
 
-        self.session = Session(d_model, d_hidden, batch_size)
+        self.session = Session(d_model, d_hidden, batch_size, dropout)
 
         self.decoder = Decoder(
             n_tgt_vocab=n_tgt_vocab, len_max_seq=len_max_seq,
@@ -232,7 +232,7 @@ class Transformer(nn.Module):
         tgt_seq, tgt_pos = tgt_seq[:, :-1], tgt_pos[:, :-1]
 
         enc_output, *_ = self.encoder(src_seq, src_pos)
-        ses_output = self.session(enc_output)
+        ses_output, *_ = self.session(enc_output)
         dec_output, *_ = self.decoder(tgt_seq, tgt_pos, src_seq, ses_output)
         seq_logit = self.tgt_word_prj(dec_output) * self.x_logit_scale
 
