@@ -67,8 +67,13 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
             desc='  - (Training / Batches)   ', leave=False):
 
         # prepare data
+        #   1) Each of src_seq, src_pos, tgt_seq, tgt_pos shapes are [batch_size, max_dis_len, max_post_len]
+        #   2) *_pos contains the index numbers for every position. 
         src_seq, src_pos, tgt_seq, tgt_pos = map(lambda x: x.to(device), batch)
-        n_steps = src_seq.size(1)
+
+        n_steps = src_seq.size(1) # n_steps is for every post in discussion (max_dis_len)
+
+        # Clip the target_seq for the BOS token
         gold = tgt_seq[:, :, 1:]
 
         # forward
@@ -78,6 +83,9 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
         # iterate through time steps
         for i in tqdm(range(n_steps),
             desc='  - (Training / Time-Steps)   ', leave=False):
+
+            # Shapes:
+            #   src_seq[:, i, :].squeeze(1): [batch_size, max_post_len]
             pred = model(
                 src_seq[:, i, :].squeeze(1), src_pos[:, i, :].squeeze(1),
                 tgt_seq[:, i, :].squeeze(1), tgt_pos[:, i, :].squeeze(1))
@@ -88,6 +96,11 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
         n_correct = 0
         for i in tqdm(range(n_steps),
             desc='  - (Training / Eval Loss)   ', leave=False):
+
+            # Shapes: 
+            #   preds[i]:                   [batch_size * max_post_len, vocab_size]
+            #   gold[:, i, :].squeeze(1):   [batch_size, max_post_len] 
+            # Gold gets flattened during loss calculation.
             loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=smoothing)
             # use total loss
             loss += loss_
@@ -108,7 +121,10 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
     return loss_per_word, accuracy
 
 def eval_epoch(model, validation_data, device):
-    ''' Epoch operation in evaluation phase '''
+    ''' Epoch operation in evaluation phase 
+    Notes:
+        1) See train loop for shape information
+    '''
 
     model.eval()
 
@@ -293,10 +309,11 @@ def main():
     print('Total number of parameters: {n:3.3}M'.format(n=n_params/1000000.0))
 
     optimizer = ScheduledOptim(
-        optim.Adam(
-            filter(lambda x: x.requires_grad, transformer.parameters()),
-            betas=(0.9, 0.98), eps=1e-09),
-        opt.d_model, opt.n_warmup_steps, lr=opt.lr)
+        optim.Adam(filter(lambda p: p.requires_grad, transformer.parameters()), betas=(0.9, 0.98), eps=1e-09),
+        opt.d_model, 
+        opt.n_warmup_steps, 
+        lr=opt.lr
+    )
 
     train(transformer, training_data, validation_data, optimizer, device ,opt)
 
