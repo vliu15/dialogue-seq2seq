@@ -7,7 +7,7 @@ pip install nltk
 python -c "import nltk; nltk.download('punkt')"
 pip3 install torch torchvision numpy tqdm
 
-mkdir data
+mkdir -p data/iac
 
 # download iacorpus dataset
 if [ ! -d data/iac_v1.1 ]; then
@@ -15,13 +15,8 @@ if [ ! -d data/iac_v1.1 ]; then
     wget http://nldslab.soe.ucsc.edu/iac/iac_v1.1.zip && unzip iac_v1.1.zip -d data && rm iac_v1.1.zip
 fi
 
-# set up pickle directory
-if [ ! -d data/iac ]; then
-    mkdir -p data/iac
-fi
-
 # load dataset into python-loadable
-if [ ! -f data/iac/*pkl ] then
+if [ ! -f data/iac/train.pkl ]; then
     # pickle dump concise dataset
     cp load_iac.py data/iac_v1.1/code
     cd data/iac_v1.1/code && python load_iac.py
