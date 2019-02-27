@@ -47,7 +47,7 @@ def main():
 
     print('[Info] Evaluate on test set.')
     with open(opt.output, 'w') as f:
-        for batch in tqdm(test_loader, mininterval=2, desc='  - (Test)', leave=False):
+        for batch in tqdm(test_loader, mininterval=2, desc='  - (Test / Discussions)', leave=False):
             all_hyp, all_scores = translator.translate_batch(*batch)
             for disc in all_hyp:
                 f.write('[\n')

@@ -3,6 +3,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from tqdm import tqdm
 
 from transformer.Models import Transformer
 from transformer.Beam import Beam
@@ -141,7 +142,8 @@ class Translator(object):
 
             batch_hyp, batch_scores = [], []
 
-            for i in range(n_steps):
+            for i in tqdm(range(n_steps),
+                mininterval=2, desc='  - (Test / Posts)', leave=False):
                 #-- Encode
                 src_seq_step = src_seq[:, i, :].squeeze(1)
                 src_pos_step = src_pos[:, i, :].squeeze(1)
@@ -161,7 +163,8 @@ class Translator(object):
                 inst_idx_to_position_map = get_inst_idx_to_tensor_position_map(active_inst_idx_list)
 
                 #-- Decode
-                for len_dec_seq in range(1, self.model_opt.max_token_post_len + 1):
+                for len_dec_seq in tqdm(range(1, self.model_opt.max_token_post_len + 1),
+                    mininterval=2, desc='  - (Test / Words)', leave=False):
 
                     active_inst_idx_list = beam_decode_step(
                         inst_dec_beams, len_dec_seq, src_seq_step, src_enc_step, inst_idx_to_position_map, n_bm)
