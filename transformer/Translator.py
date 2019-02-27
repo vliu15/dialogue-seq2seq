@@ -151,7 +151,7 @@ class Translator(object):
                 n_bm = self.opt.beam_size
                 n_inst, len_s, d_h = src_enc_step.size()
                 src_seq_step = src_seq_step.repeat(1, n_bm).view(n_inst * n_bm, len_s)
-                src_pos_step = src_pos_step.repeat(1, n_bm, 1).view(n_inst * n_bm, len_s, d_h)
+                src_enc_step = src_enc_step.repeat(1, n_bm, 1).view(n_inst * n_bm, len_s, d_h)
 
                 #-- Prepare beams
                 inst_dec_beams = [Beam(n_bm, device=self.device) for _ in range(n_inst)]
