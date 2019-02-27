@@ -28,7 +28,7 @@ def main():
 
     # Prepare DataLoader
     test_data = torch.load(opt.test_file)
-    settings = test_data['settings']
+    preprocess_settings = test_data['settings']
 
     test_src_insts = test_data['test']['src']
     test_tgt_insts = test_data['test']['tgt']
@@ -40,9 +40,10 @@ def main():
             src_insts=test_src_insts),
         num_workers=2,
         batch_size=opt.batch_size,
+        drop_last=True,
         collate_fn=collate_fn)
 
-    translator = Translator(opt)
+    translator = Translator(opt, preprocess_settings)
 
     print('[Info] Evaluate on test set.')
     with open(opt.output, 'w') as f:

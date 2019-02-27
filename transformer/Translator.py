@@ -10,12 +10,13 @@ from transformer.Beam import Beam
 class Translator(object):
     ''' Load with trained model and handle the beam search '''
 
-    def __init__(self, opt):
+    def __init__(self, opt, preprocess_settings):
         self.opt = opt
         self.device = torch.device('cuda' if opt.cuda else 'cpu')
 
         checkpoint = torch.load(opt.model)
         model_opt = checkpoint['settings']
+        model_opt.max_post_len = preprocess_settings.max_token_post_len # max_token_post_len = max_post_len + 2 from preprocessing
         self.model_opt = model_opt
 
         model = Transformer(
