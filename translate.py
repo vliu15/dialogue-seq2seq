@@ -49,10 +49,12 @@ def main():
     with open(opt.output, 'w') as f:
         for batch in tqdm(test_loader, mininterval=2, desc='  - (Test)', leave=False):
             all_hyp, all_scores = translator.translate_batch(*batch)
-            for idx_seqs in all_hyp:
-                for idx_seq in idx_seqs:
-                    pred_line = ' '.join([test_loader.dataset.tgt_idx2word[idx] for idx in idx_seq])
-                    f.write(pred_line + '\n')
+            for disc in all_hyp:
+                f.write('[\n')
+                for post in disc:
+                    pred_post = ' '.join([test_loader.dataset.tgt_idx2word[word] for word in post])
+                    f.write('\t' + pred_line + '\n')
+                f.write(']\n')
     print('[Info] Finished.')
 
 if __name__ == "__main__":

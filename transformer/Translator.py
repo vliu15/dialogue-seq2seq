@@ -16,7 +16,7 @@ class Translator(object):
 
         checkpoint = torch.load(opt.model)
         model_opt = checkpoint['settings']
-        model_opt.max_post_len = preprocess_settings.max_token_post_len # max_token_post_len = max_post_len + 2 from preprocessing
+        model_opt.max_token_post_len = preprocess_settings.max_token_post_len # max_token_post_len = max_post_len + 2 from preprocessing
         self.model_opt = model_opt
 
         model = Transformer(
@@ -135,35 +135,49 @@ class Translator(object):
             return all_hyp, all_scores
 
         with torch.no_grad():
-            #-- Encode
+            #-- Prepare to step through sequences
             src_seq, src_pos = src_seq.to(self.device), src_pos.to(self.device)
-            src_enc, *_ = self.model.encoder(src_seq, src_pos)
+            n_steps = src_seq.size(1)
 
-            #-- Repeat data for beam search
-            n_bm = self.opt.beam_size
-            n_inst, len_s, d_h = src_enc.size()
-            src_seq = src_seq.repeat(1, n_bm).view(n_inst * n_bm, len_s)
-            src_enc = src_enc.repeat(1, n_bm, 1).view(n_inst * n_bm, len_s, d_h)
+            batch_hyp, batch_scores = [], []
 
-            #-- Prepare beams
-            inst_dec_beams = [Beam(n_bm, device=self.device) for _ in range(n_inst)]
+            for i in range(n_steps):
+                #-- Encode
+                src_enc, *_ = self.model.encoder(src_seq[:, i, :].squeeze(1), src_pos[:, i, :].squeeze(1))
 
-            #-- Bookkeeping for active or not
-            active_inst_idx_list = list(range(n_inst))
-            inst_idx_to_position_map = get_inst_idx_to_tensor_position_map(active_inst_idx_list)
+                #-- Repeat data for beam search
+                n_bm = self.opt.beam_size
+                n_inst, len_s, d_h = src_enc.size()
+                src_seq = src_seq.repeat(1, n_bm).view(n_inst * n_bm, len_s)
+                src_enc = src_enc.repeat(1, n_bm, 1).view(n_inst * n_bm, len_s, d_h)
 
-            #-- Decode
-            for len_dec_seq in range(1, self.model_opt.max_token_seq_len + 1):
+                #-- Prepare beams
+                inst_dec_beams = [Beam(n_bm, device=self.device) for _ in range(n_inst)]
 
-                active_inst_idx_list = beam_decode_step(
-                    inst_dec_beams, len_dec_seq, src_seq, src_enc, inst_idx_to_position_map, n_bm)
+                #-- Bookkeeping for active or not
+                active_inst_idx_list = list(range(n_inst))
+                inst_idx_to_position_map = get_inst_idx_to_tensor_position_map(active_inst_idx_list)
 
-                if not active_inst_idx_list:
-                    break  # all instances have finished their path to <EOS>
+                #-- Decode
+                for len_dec_seq in range(1, self.model_opt.max_token_post_len + 1):
 
-                src_seq, src_enc, inst_idx_to_position_map = collate_active_info(
-                    src_seq, src_enc, inst_idx_to_position_map, active_inst_idx_list)
+                    active_inst_idx_list = beam_decode_step(
+                        inst_dec_beams, len_dec_seq, src_seq, src_enc, inst_idx_to_position_map, n_bm)
 
-        batch_hyp, batch_scores = collect_hypothesis_and_scores(inst_dec_beams, self.opt.n_best)
+                    if not active_inst_idx_list:
+                        break  # all instances have finished their path to <EOS>
+
+                    src_seq, src_enc, inst_idx_to_position_map = collate_active_info(
+                        src_seq, src_enc, inst_idx_to_position_map, active_inst_idx_list)
+
+                hyp, scores = collect_hypothesis_and_scores(inst_dec_beams, self.opt.n_best)
+
+                #-- Accumulate per step
+                batch_hyp.append(hyp)
+                batch_scores.append(scores)
+            
+            #-- Vectorize
+            batch_hyp = torch.cat(batch_hyp, dim=1)
+            batch_scores = torch.cat(batch_scores, dim=1)
 
         return batch_hyp, batch_scores
