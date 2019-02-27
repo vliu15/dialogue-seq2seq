@@ -143,13 +143,15 @@ class Translator(object):
 
             for i in range(n_steps):
                 #-- Encode
-                src_enc, *_ = self.model.encoder(src_seq[:, i, :].squeeze(1), src_pos[:, i, :].squeeze(1))
+                src_seq_step = src_seq[:, i, :].squeeze(1)
+                src_pos_step = src_pos[:, i, :].squeeze(1)
+                src_enc_step, *_ = self.model.encoder(src_seq_step, src_pos_step)
 
                 #-- Repeat data for beam search
                 n_bm = self.opt.beam_size
-                n_inst, len_s, d_h = src_enc.size()
-                src_seq = src_seq.repeat(1, n_bm).view(n_inst * n_bm, len_s)
-                src_enc = src_enc.repeat(1, n_bm, 1).view(n_inst * n_bm, len_s, d_h)
+                n_inst, len_s, d_h = src_enc_step.size()
+                src_seq_step = src_seq_step.repeat(1, n_bm).view(n_inst * n_bm, len_s)
+                src_pos_step = src_pos_step.repeat(1, n_bm, 1).view(n_inst * n_bm, len_s, d_h)
 
                 #-- Prepare beams
                 inst_dec_beams = [Beam(n_bm, device=self.device) for _ in range(n_inst)]
@@ -162,13 +164,13 @@ class Translator(object):
                 for len_dec_seq in range(1, self.model_opt.max_token_post_len + 1):
 
                     active_inst_idx_list = beam_decode_step(
-                        inst_dec_beams, len_dec_seq, src_seq, src_enc, inst_idx_to_position_map, n_bm)
+                        inst_dec_beams, len_dec_seq, src_seq_step, src_enc_step, inst_idx_to_position_map, n_bm)
 
                     if not active_inst_idx_list:
                         break  # all instances have finished their path to <EOS>
 
-                    src_seq, src_enc, inst_idx_to_position_map = collate_active_info(
-                        src_seq, src_enc, inst_idx_to_position_map, active_inst_idx_list)
+                    src_seq_step, src_enc_step, inst_idx_to_position_map = collate_active_info(
+                        src_seq_step, src_enc_step, inst_idx_to_position_map, active_inst_idx_list)
 
                 hyp, scores = collect_hypothesis_and_scores(inst_dec_beams, self.opt.n_best)
 
