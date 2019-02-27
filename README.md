@@ -28,6 +28,5 @@ python3 train.py -data data/iac/train.data.pt -save_model trained \
 
 ### Testing
 ```bash
-python3 translate.py -model trained.chkpt -vocab data/iac/train.data.pt \
-  -src data/iac/test.pkl
+python3 translate.py -model trained.chkpt -test_file data/iac/test.data.pt
 ```
