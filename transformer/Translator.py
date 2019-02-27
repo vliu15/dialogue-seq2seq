@@ -21,7 +21,7 @@ class Translator(object):
         model = Transformer(
             model_opt.src_vocab_size,
             model_opt.tgt_vocab_size,
-            model_opt.max_token_seq_len,
+            model_opt.max_disc_len,
             tgt_emb_prj_weight_sharing=model_opt.proj_share_weight,
             emb_src_tgt_weight_sharing=model_opt.embs_share_weight,
             d_k=model_opt.d_k,
@@ -29,6 +29,7 @@ class Translator(object):
             d_model=model_opt.d_model,
             d_word_vec=model_opt.d_word_vec,
             d_inner=model_opt.d_inner_hid,
+            d_hidden=model_opt.d_hidden,
             n_layers=model_opt.n_layers,
             n_head=model_opt.n_head,
             dropout=model_opt.dropout)
