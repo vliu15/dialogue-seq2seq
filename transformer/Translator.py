@@ -22,7 +22,7 @@ class Translator(object):
         model = Transformer(
             model_opt.src_vocab_size,
             model_opt.tgt_vocab_size,
-            model_opt.max_disc_len,
+            model_opt.max_post_len,
             model_opt.batch_size,
             tgt_emb_prj_weight_sharing=model_opt.proj_share_weight,
             emb_src_tgt_weight_sharing=model_opt.embs_share_weight,
