@@ -17,7 +17,6 @@ class Translator(object):
 
         checkpoint = torch.load(opt.model)
         model_opt = checkpoint['settings']
-        model_opt.max_token_post_len = preprocess_settings.max_token_post_len # max_token_post_len = max_post_len + 2 from preprocessing
         self.model_opt = model_opt
 
         model = Transformer(
