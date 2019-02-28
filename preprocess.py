@@ -4,6 +4,7 @@ import transformer.Constants as Constants
 import argparse
 import pickle
 import torch
+import numpy as np
 
 def process_sequence(seq, max_post_len, max_disc_len, keep_case):
     ''' Trim to max lengths '''
@@ -205,7 +206,8 @@ def main():
 
     ##-- build vocabulary
     if opt.vocab:
-        predefined_data = torch.load(opt.vocab)
+        with open(opt.vocab ,'rb') as f:
+            predefined_data = pickle.load(f)
         assert 'dict' in predefined_data
 
         print('[Info] Pre-defined vocabulary found.')
