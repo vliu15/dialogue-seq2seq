@@ -1,50 +1,17 @@
-''' This module will handle the text generation with beam search. '''
-
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+import argparse
+import numpy as np
+from nltk import word_tokenize
 from tqdm import tqdm
 
 from transformer.Models import Transformer
-from transformer.Beam import Beam
+from transformer.Translator import Translator
+from transformer import Constants
+from preprocess import convert_instance_to_idx_seq
 
-class Translator(object):
-    ''' Load with trained model and handle the beam search '''
-
+class Interactive(Translator):
     def __init__(self, opt):
-        self.opt = opt
-        self.device = torch.device('cuda' if opt.cuda else 'cpu')
-
-        checkpoint = torch.load(opt.model)
-        model_opt = checkpoint['settings']
-        self.model_opt = model_opt
-
-        model = Transformer(
-            model_opt.src_vocab_size,
-            model_opt.tgt_vocab_size,
-            model_opt.max_post_len,
-            model_opt.batch_size,
-            tgt_emb_prj_weight_sharing=model_opt.proj_share_weight,
-            emb_src_tgt_weight_sharing=model_opt.embs_share_weight,
-            d_k=model_opt.d_k,
-            d_v=model_opt.d_v,
-            d_model=model_opt.d_model,
-            d_word_vec=model_opt.d_word_vec,
-            d_inner=model_opt.d_inner_hid,
-            d_hidden=model_opt.d_hidden,
-            n_layers=model_opt.n_layers,
-            n_head=model_opt.n_head,
-            dropout=model_opt.dropout)
-
-        model.load_state_dict(checkpoint['model'])
-        print('[Info] Trained model state loaded.')
-
-        model.word_prob_prj = nn.LogSoftmax(dim=1)
-
-        model = model.to(self.device)
-
-        self.model = model
-        self.model.eval()
+        super().__init__(opt)
 
     def translate_batch(self, src_seq, src_pos):
         ''' Translation work in one batch '''
@@ -139,49 +106,79 @@ class Translator(object):
             src_seq, src_pos = src_seq.to(self.device), src_pos.to(self.device)
             n_steps = src_seq.size(1)
 
-            batch_hyp, batch_scores = [], []
+            #-- Encode
+            src_enc, *_ = self.model.encoder(src_seq, src_pos)
 
-            for i in tqdm(range(n_steps),
-                mininterval=2, desc='  - (Test / Posts)', leave=False):
-                #-- Encode
-                src_seq_step = src_seq[:, i, :].squeeze(1)
-                src_pos_step = src_pos[:, i, :].squeeze(1)
-                src_enc_step, *_ = self.model.encoder(src_seq_step, src_pos_step)
+            #-- Repeat data for beam search
+            n_bm = self.opt.beam_size
+            n_inst, len_s, d_h = src_enc_step.size()
+            src_seq = src_seq.repeat(1, n_bm).view(n_inst * n_bm, len_s)
+            src_enc = src_enc.repeat(1, n_bm, 1).view(n_inst * n_bm, len_s, d_h)
 
-                #-- Repeat data for beam search
-                n_bm = self.opt.beam_size
-                n_inst, len_s, d_h = src_enc_step.size()
-                src_seq_step = src_seq_step.repeat(1, n_bm).view(n_inst * n_bm, len_s)
-                src_enc_step = src_enc_step.repeat(1, n_bm, 1).view(n_inst * n_bm, len_s, d_h)
+            #-- Prepare beams
+            inst_dec_beams = [Beam(n_bm, device=self.device) for _ in range(n_inst)]
 
-                #-- Prepare beams
-                inst_dec_beams = [Beam(n_bm, device=self.device) for _ in range(n_inst)]
+            #-- Bookkeeping for active or not
+            active_inst_idx_list = list(range(n_inst))
+            inst_idx_to_position_map = get_inst_idx_to_tensor_position_map(active_inst_idx_list)
 
-                #-- Bookkeeping for active or not
-                active_inst_idx_list = list(range(n_inst))
-                inst_idx_to_position_map = get_inst_idx_to_tensor_position_map(active_inst_idx_list)
+            #-- Decode
+            for len_dec_seq in range(1, self.model_opt.max_token_post_len + 1):
 
-                #-- Decode
-                for len_dec_seq in tqdm(range(1, self.model_opt.max_token_post_len + 1),
-                    mininterval=2, desc='  - (Test / Words)', leave=False):
+                active_inst_idx_list = beam_decode_step(
+                    inst_dec_beams, len_dec_seq, src_seq, src_enc, inst_idx_to_position_map, n_bm)
 
-                    active_inst_idx_list = beam_decode_step(
-                        inst_dec_beams, len_dec_seq, src_seq_step, src_enc_step, inst_idx_to_position_map, n_bm)
+                if not active_inst_idx_list:
+                    break  # all instances have finished their path to <EOS>
 
-                    if not active_inst_idx_list:
-                        break  # all instances have finished their path to <EOS>
+                src_seq, src_enc, inst_idx_to_position_map = collate_active_info(
+                    src_seq, src_enc, inst_idx_to_position_map, active_inst_idx_list)
 
-                    src_seq_step, src_enc_step, inst_idx_to_position_map = collate_active_info(
-                        src_seq_step, src_enc_step, inst_idx_to_position_map, active_inst_idx_list)
+            hyp, scores = collect_hypothesis_and_scores(inst_dec_beams, self.opt.n_best)
 
-                hyp, scores = collect_hypothesis_and_scores(inst_dec_beams, self.opt.n_best)
+        return hyp, scores
+    
 
-                #-- Accumulate per step
-                batch_hyp.append(hyp)
-                batch_scores.append(scores)
-            
-            #-- Vectorize
-            batch_hyp = torch.cat(batch_hyp, dim=1)
-            batch_scores = torch.cat(batch_scores, dim=1)
+def interactive(opt):
+    def prepare_seq(seq, max_seq_len, word2idx):
+        seq = seq[:max_seq_len]
+        seq = convert_instance_to_idx_seq(word_tokenize(seq), src_word2idx)
+        seq = [seq + [Constants.PAD] * (max_seq_len - len(seq))]
+        pos = np.array([pos_i+1 if w_i != Constants.PAD else 0 for w_i in enumerate(seq)])
+        return seq, pos
 
-        return batch_hyp, batch_scores
+    #- Load preprocessing file for vocabulary
+    prepro = torch.load(opt.prepro_file)
+    src_word2idx = prepro['dict']['src']
+    del prepro # to save memory
+
+    #- Prepare interactive shell
+    seq2seq = Interactive(opt)
+    max_seq_len = seq2seq.model_opt.max_seq_len
+
+    #- Interact with console
+    console_input = ''
+    console_output = 'What do you have to say?'
+    while user_input != 'exit':
+        console_input = input(console_output) # get user input
+        seq = prepare_seq(console_input, max_seq_len, src_word2idx)
+        seq, pos = torch.Tensor(seq).to(seq2seq.device)
+        console_output, _ = seq2seq.translate_batch(seq, pos)
+    
+    print('Thanks for talking with me!')
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='translate.py')
+
+    parser.add_argument('-model', required=True, help='Path to model .pt file')
+    parser.add_argument('-prepro_file', required=True, help='Path to preprocessed data for vocab')
+    parser.add_argument('-beam_size', type=int, default=5, help='Beam size')
+    parser.add_argument('-n_best', type=int, default=1, help='If verbose is set, will output the n_best decoded sentences')
+    parser.add_argument('-no_cuda', action='store_true')
+
+    opt = parser.parse_args()
+    opt.cuda = not opt.no_cuda
+    opt.batch_size = 1
+
+    interactive(opt)

@@ -8,7 +8,6 @@ import pickle
 
 from dataset import collate_fn, TranslationDataset
 from transformer.Translator import Translator
-from preprocess import read_instances, prune, convert_instance_to_idx_seq
 
 def main():
     '''Main Function'''
@@ -28,7 +27,6 @@ def main():
 
     # Prepare DataLoader
     test_data = torch.load(opt.test_file)
-    preprocess_settings = test_data['settings']
 
     test_src_insts = test_data['test']['src']
     test_tgt_insts = test_data['test']['tgt']
@@ -43,7 +41,7 @@ def main():
         drop_last=True,
         collate_fn=collate_fn)
 
-    translator = Translator(opt, preprocess_settings)
+    translator = Translator(opt)
 
     print('[Info] Evaluate on test set.')
     with open(opt.output, 'w') as f:
