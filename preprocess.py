@@ -4,6 +4,7 @@ import transformer.Constants as Constants
 import argparse
 import pickle
 import torch
+import numpy as np
 
 def process_sequence(seq, max_post_len, max_disc_len, keep_case):
     # track trimmed counts for warnings
@@ -168,7 +169,7 @@ def main():
     opt = parser.parse_args()
     opt.max_token_post_len = opt.max_post_len + 2 # include the <s> and </s>
 
-    ##-- training set
+    # ##-- training set
     print("[Info] Loading training set...")
     with open(opt.train_file, 'rb') as f:
         train = pickle.load(f)
@@ -179,7 +180,7 @@ def main():
     train_src_word_insts, train_tgt_word_insts = prune(
         train_src_word_insts, train_tgt_word_insts, 'training')
     
-    ##-- validation set
+    # ##-- validation set
     print("[Info] Loading validation set...")
     with open(opt.valid_file, 'rb') as f:
         val = pickle.load(f)
@@ -192,7 +193,8 @@ def main():
 
     ##-- build vocabulary
     if opt.vocab:
-        predefined_data = torch.load(opt.vocab)
+        with open(opt.vocab ,'rb') as f:
+            predefined_data = pickle.load(f)
         assert 'dict' in predefined_data
 
         print('[Info] Pre-defined vocabulary found.')
