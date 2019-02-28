@@ -47,4 +47,5 @@ if [ ! -f data/glove/glove.pkl ]; then
 fi
 
 # perform preprocessing
-python3 preprocess.py -train_file data/iac/train.pkl -valid_file data/iac/val.pkl -vocab data/glove/glove.pkl -save_dir data/iac -share_vocab 
+python3 preprocess.py -train_file data/iac/train.pkl -valid_file data/iac/val.pkl -test_file data/iac/test.pkl \
+    -save_dir data/iac -vocab data/glove/glove.pkl -share_vocab

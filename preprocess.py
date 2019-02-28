@@ -7,6 +7,7 @@ import torch
 import numpy as np
 
 def process_sequence(seq, max_post_len, max_disc_len, keep_case):
+    ''' Trim to max lengths '''
     # track trimmed counts for warnings
     trimmed_disc_count = 0
     trimmed_post_count = 0
@@ -31,14 +32,14 @@ def process_sequence(seq, max_post_len, max_disc_len, keep_case):
     return seq, trimmed_disc_count, trimmed_post_count
 
 def read_instances(inst, max_post_len, max_disc_len, keep_case, split_name):
-    '''Each inst is a dataset in the following format:
-    [
-        {
-            'src': [...],
-            'tgt': [...]
-        },
-        ...
-    ]
+    ''' Each inst is a dataset in the following format:
+        [
+            {
+                'src': [...],
+                'tgt': [...]
+            },
+            ...
+        ]
     '''
     # generate all src and tgt insts
     src_insts = []
@@ -119,7 +120,7 @@ def prune(src_word_insts, tgt_word_insts, split_name):
     return src, tgt
 
 def build_vocab_idx(word_insts, min_word_count):
-    '''Generate vocabulary given minimum count threshold.'''
+    ''' Generate vocabulary given minimum count threshold '''
 
     full_vocab = set([w for thread in word_insts for seq in thread for w in seq])
     print('[Info] Original Vocabulary size =', len(full_vocab))
@@ -147,17 +148,18 @@ def build_vocab_idx(word_insts, min_word_count):
 
     print('[Info] Trimmed vocabulary size = {},'.format(len(word2idx)),
           'each with minimum occurrence = {}'.format(min_word_count))
-    print("[Info] Ignored word count = {}".format(ignored_word_count))
+    print('[Info] Ignored word count = {}'.format(ignored_word_count))
     return word2idx
 
 def convert_instance_to_idx_seq(word_insts, word2idx):
-    ''' Map words to idx sequence. '''
+    ''' Map words to idx sequence '''
     return [[[word2idx.get(w, Constants.UNK) for w in seq] for seq in thread] for thread in word_insts]
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-train_file', required=True)
     parser.add_argument('-valid_file', required=True)
+    parser.add_argument('-test_file', required=True)
     parser.add_argument('-save_dir', required=True)
     parser.add_argument('-max_post_len', type=int, default=50)
     parser.add_argument('-max_disc_len', type=int, default=50)
@@ -169,27 +171,38 @@ def main():
     opt = parser.parse_args()
     opt.max_token_post_len = opt.max_post_len + 2 # include the <s> and </s>
 
-    # ##-- training set
-    print("[Info] Loading training set...")
+    ##-- training set
+    print('[Info] Load training set.')
     with open(opt.train_file, 'rb') as f:
         train = pickle.load(f)
     train_src_word_insts, train_tgt_word_insts = read_instances(
         train, opt.max_post_len, opt.max_disc_len, opt.keep_case, 'train')
     # prune for mismatches and empty instances / sequences
-    print("[Info] Pruning empty sentences and src/tgt mismatches...")
+    print('[Info] Prune empty sentences and src/tgt mismatches.')
     train_src_word_insts, train_tgt_word_insts = prune(
         train_src_word_insts, train_tgt_word_insts, 'training')
     
-    # ##-- validation set
-    print("[Info] Loading validation set...")
+    ##-- validation set
+    print('[Info] Load validation set.')
     with open(opt.valid_file, 'rb') as f:
         val = pickle.load(f)
     val_src_word_insts, val_tgt_word_insts = read_instances(
         val, opt.max_post_len, opt.max_disc_len, opt.keep_case, 'valid')
     # prune for mismatches and empty instances / sequences
-    print("[Info] Pruning empty sentences and src/tgt mismatches...")
+    print('[Info] Prune empty sentences and src/tgt mismatches.')
     val_src_word_insts, val_tgt_word_insts = prune(
         val_src_word_insts, val_tgt_word_insts, 'validation')
+
+    ##-- testing set
+    print('[Info] Load testing set.')
+    with open(opt.test_file, 'rb') as f:
+        test = pickle.load(f)
+    test_src_word_insts, test_tgt_word_insts = read_instances(
+        test, opt.max_post_len, opt.max_disc_len, opt.keep_case, 'test')
+    # prune for mismatches and empty instances / sequences
+    print('[Info] Prune empty sentences and src/tgt mismatches.')
+    test_src_word_insts, test_tgt_word_insts = prune(
+        test_src_word_insts, test_tgt_word_insts, 'testing')
 
     ##-- build vocabulary
     if opt.vocab:
@@ -216,12 +229,15 @@ def main():
     print('[Info] Convert source word instances into sequences of word index.')
     train_src_insts = convert_instance_to_idx_seq(train_src_word_insts, src_word2idx)
     val_src_insts = convert_instance_to_idx_seq(val_src_word_insts, src_word2idx)
+    test_src_insts = convert_instance_to_idx_seq(test_src_word_insts, src_word2idx)
 
     print('[Info] Convert target word instances into sequences of word index.')
     train_tgt_insts = convert_instance_to_idx_seq(train_tgt_word_insts, tgt_word2idx)
     val_tgt_insts = convert_instance_to_idx_seq(val_tgt_word_insts, tgt_word2idx)
+    test_tgt_insts = convert_instance_to_idx_seq(test_tgt_word_insts, tgt_word2idx)
     
-    data = {
+    ##-- training data
+    train_data = {
         'settings': opt,
         'dict': {
             'src': src_word2idx,
@@ -233,8 +249,22 @@ def main():
             'src': val_src_insts,
             'tgt': val_tgt_insts}}
 
-    print('[Info] Dumping the processed data to pickle file', opt.save_dir + '/train.data.pt')
-    torch.save(data, opt.save_dir + '/train.data.pt')
+    print('[Info] Dump the processed training data to pickle file', opt.save_dir + '/train.data.pt')
+    torch.save(train_data, opt.save_dir + '/train.data.pt')
+
+    ##-- testing data
+    test_data = {
+        'settings': opt,
+        'dict': {
+            'src': src_word2idx,
+            'tgt': tgt_word2idx},
+        'test': {
+            'src': test_src_insts,
+            'tgt': test_tgt_insts}}
+
+    print('[Info] Dump the processed testing data to pickle file', opt.save_dir + '/test.data.pt')
+    torch.save(test_data, opt.save_dir + '/test.data.pt')
+    
     print('[Info] Finish.')
 
 if __name__ == '__main__':

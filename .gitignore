@@ -1,7 +1,9 @@
 # Generated outputs
 data/
-**/*chkpt
-**/*gz
+**/*.chkpt
+**/*.gz
+**/*.txt
+**/*slurm*
 .DS_STORE
 
 # Byte-compiled / optimized / DLL files
