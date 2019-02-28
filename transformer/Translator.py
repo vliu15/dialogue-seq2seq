@@ -36,7 +36,8 @@ class Translator(object):
             n_head=model_opt.n_head,
             dropout=model_opt.dropout)
 
-        model.load_state_dict(checkpoint['model'])
+        self.state_dict = checkpoint['model']
+        model.load_state_dict(self.state_dict)
         print('[Info] Trained model state loaded.')
 
         model.word_prob_prj = nn.LogSoftmax(dim=1)
@@ -45,6 +46,9 @@ class Translator(object):
 
         self.model = model
         self.model.eval()
+
+    def reload_weights(self):
+        self.model.load_state_dict(self.state_dict)
 
     def translate_batch(self, src_seq, src_pos):
         ''' Translation work in one batch '''
@@ -135,6 +139,9 @@ class Translator(object):
             return all_hyp, all_scores
 
         with torch.no_grad():
+            #-- Reset weights (to reset LSTM Cell weights)
+            self.reload_weights()
+            
             #-- Prepare to step through sequences
             src_seq, src_pos = src_seq.to(self.device), src_pos.to(self.device)
             n_steps = src_seq.size(1)
