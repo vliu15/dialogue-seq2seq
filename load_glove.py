@@ -31,7 +31,6 @@ def load_glove(glove_path, glove_size):
     emb_table = np.zeros(shape=(len(word2idx), glove_size))
     for i in range(len(word2idx)):
         emb_table[i] = idx2emb[i]
-    print(emb_table.shape)
 
     #- Create word2idx mapping
     word2idx = {
