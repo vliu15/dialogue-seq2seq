@@ -189,7 +189,7 @@ class Transformer(nn.Module):
             d_word_vec=512, d_model=512, d_inner=2048, d_hidden=512,
             n_layers=6, n_head=8, d_k=64, d_v=64, dropout=0.1,
             tgt_emb_prj_weight_sharing=True,
-            emb_src_tgt_weight_sharing=True):
+            emb_src_tgt_weight_sharing=True, train_for_mmi_loss=False):
 
         super().__init__()
 
@@ -226,14 +226,29 @@ class Transformer(nn.Module):
             assert n_src_vocab == n_tgt_vocab, \
             "To share word embedding table, the vocabulary size of src/tgt shall be the same."
             self.encoder.src_word_emb.weight = self.decoder.tgt_word_emb.weight
+        
+        self.train_for_mmi_loss = train_for_mmi_loss
 
     def forward(self, src_seq, src_pos, tgt_seq, tgt_pos):
-
+        # Data shape notes:
+        #   1) Each of src_seq, src_pos, tgt_seq, tgt_pos shapes are [batch_size, max_post_len]
+        #   2) *_pos contains the index numbers for every position. 
         tgt_seq, tgt_pos = tgt_seq[:, :-1], tgt_pos[:, :-1]
 
         enc_output, *_ = self.encoder(src_seq, src_pos)
         ses_output, *_ = self.session(enc_output)
-        dec_output, *_ = self.decoder(tgt_seq, tgt_pos, src_seq, ses_output)
+        # Output size:
+        #   1) enc_output, ses_output: [batch_size, max_post_len, d_hidden]
+        if self.train_for_mmi_loss:
+            ses_output = torch.cat((ses_output, enc_output), dim=0) # Size [batch_size * 2, max_post_len, d_hidden]
+            new_tgt_seq, new_tgt_pos, new_src_seq = tgt_seq.repeat((2, 1)), tgt_pos.repeat((2, 1)), src_seq.repeat((2, 1)) # Size [batch_size*2, max_post_len - (0 or 1)]
+            dec_output, *_ = self.decoder(new_tgt_seq, new_tgt_pos, new_src_seq, ses_output)
+
+            dec_output_session, dec_output_no_session = torch.split(dec_output, int(dec_output.shape[0]/2), dim=0)
+            dec_output = dec_output_session - dec_output_no_session
+        else:
+            dec_output, *_ = self.decoder(tgt_seq, tgt_pos, src_seq, ses_output)
+
         seq_logit = self.tgt_word_prj(dec_output) * self.x_logit_scale
 
         return seq_logit.view(-1, seq_logit.size(2))
