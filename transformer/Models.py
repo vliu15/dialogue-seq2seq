@@ -51,6 +51,12 @@ def get_subsequent_mask(seq):
 
     return subsequent_mask
 
+def get_pretrained_emb(path):
+    ''' Load pretrained embedding table from Numpy binary '''
+    emb = np.load(path)
+    assert isinstance(emb, np.ndarray)
+    return torch.FloatTensor(emb)
+
 class Encoder(nn.Module):
     ''' A encoder model with self attention mechanism. '''
 
@@ -58,18 +64,30 @@ class Encoder(nn.Module):
             self,
             n_src_vocab, len_max_seq, d_word_vec,
             n_layers, n_head, d_k, d_v,
-            d_model, d_inner, dropout=0.1):
+            d_model, d_inner, dropout=0.1,
+            emb_file=''):
 
         super().__init__()
 
         n_position = len_max_seq + 1
 
-        self.src_word_emb = nn.Embedding(
-            n_src_vocab, d_word_vec, padding_idx=Constants.PAD)
+        # load static embeddings only if specified
+        if emb_file != '':
+            self.src_word_emb = nn.Embedding.from_pretrained(
+                get_pretrained_emb(emb_file), freeze=True)
+        else:
+            self.src_word_emb = nn.Embedding(
+                n_src_vocab, d_word_vec, padding_idx=Constants.PAD)
 
         self.position_enc = nn.Embedding.from_pretrained(
             get_sinusoid_encoding_table(n_position, d_word_vec, padding_idx=0),
             freeze=True)
+
+        # for projecting d_word_vec into d_model only if necessary
+        if d_model != d_word_vec:
+            self.emb_model_proj = nn.Linear(d_word_vec, d_model)
+        else:
+            self.emb_model_proj = lambda x: x
 
         self.layer_stack = nn.ModuleList([
             EncoderLayer(d_model, d_inner, n_head, d_k, d_v, dropout=dropout)
@@ -85,6 +103,7 @@ class Encoder(nn.Module):
 
         # -- Forward
         enc_output = self.src_word_emb(src_seq) + self.position_enc(src_pos)
+        enc_output = self.emb_model_proj(enc_output)
 
         for enc_layer in self.layer_stack:
             enc_output, enc_slf_attn = enc_layer(
@@ -133,17 +152,29 @@ class Decoder(nn.Module):
             self,
             n_tgt_vocab, len_max_seq, d_word_vec,
             n_layers, n_head, d_k, d_v,
-            d_model, d_inner, dropout=0.1):
+            d_model, d_inner, dropout=0.1,
+            emb_file=''):
 
         super().__init__()
         n_position = len_max_seq + 1
 
-        self.tgt_word_emb = nn.Embedding(
-            n_tgt_vocab, d_word_vec, padding_idx=Constants.PAD)
+        # load static embeddings only if specified
+        if emb_file != '':
+            self.tgt_word_emb = nn.Embedding.from_pretrained(
+                get_pretrained_emb(emb_file), freeze=True)
+        else:
+            self.tgt_word_emb = nn.Embedding(
+                n_tgt_vocab, d_word_vec, padding_idx=Constants.PAD)
 
         self.position_enc = nn.Embedding.from_pretrained(
             get_sinusoid_encoding_table(n_position, d_word_vec, padding_idx=0),
             freeze=True)
+
+        # for projecting d_word_vec into d_model only if necessary
+        if d_model != d_word_vec:
+            self.emb_model_proj = nn.Linear(d_word_vec, d_model)
+        else:
+            self.emb_model_proj = lambda x: x
 
         self.layer_stack = nn.ModuleList([
             DecoderLayer(d_model, d_inner, n_head, d_k, d_v, dropout=dropout)
@@ -164,6 +195,7 @@ class Decoder(nn.Module):
 
         # -- Forward
         dec_output = self.tgt_word_emb(tgt_seq) + self.position_enc(tgt_pos)
+        dec_output = self.emb_model_proj(dec_output)
 
         for dec_layer in self.layer_stack:
             dec_output, dec_slf_attn, dec_enc_attn = dec_layer(
@@ -189,7 +221,8 @@ class Transformer(nn.Module):
             d_word_vec=512, d_model=512, d_inner=2048, d_hidden=512,
             n_layers=6, n_head=8, d_k=64, d_v=64, dropout=0.1,
             tgt_emb_prj_weight_sharing=True,
-            emb_src_tgt_weight_sharing=True):
+            emb_src_tgt_weight_sharing=True,
+            src_emb_file='', tgt_emb_file=''):
 
         super().__init__()
 
@@ -197,7 +230,7 @@ class Transformer(nn.Module):
             n_src_vocab=n_src_vocab, len_max_seq=len_max_seq,
             d_word_vec=d_word_vec, d_model=d_model, d_inner=d_inner,
             n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
-            dropout=dropout)
+            dropout=dropout, emb_file=src_emb_file)
 
         self.session = Session(d_model, d_hidden, batch_size, dropout)
 
@@ -205,18 +238,24 @@ class Transformer(nn.Module):
             n_tgt_vocab=n_tgt_vocab, len_max_seq=len_max_seq,
             d_word_vec=d_word_vec, d_model=d_model, d_inner=d_inner,
             n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
-            dropout=dropout)
+            dropout=dropout, emb_file=tgt_emb_file)
 
         self.tgt_word_prj = nn.Linear(d_model, n_tgt_vocab, bias=False)
         nn.init.xavier_normal_(self.tgt_word_prj.weight)
 
-        assert d_model == d_word_vec, \
-        'To facilitate the residual connections, \
-         the dimensions of all module outputs shall be the same.'
+        # assert d_model == d_word_vec, \
+        # 'To facilitate the residual connections, \
+        #  the dimensions of all module outputs shall be the same.'
 
         if tgt_emb_prj_weight_sharing:
             # Share the weight matrix between target word embedding & the final logit dense layer
-            self.tgt_word_prj.weight = self.decoder.tgt_word_emb.weight
+            if d_word_vec != d_model:
+                # matmul for linear proj is necessary to ensure compatibility between
+                # different embedding and model sizes
+                self.tgt_word_prj.weight = nn.Parameter(torch.matmul(
+                    self.decoder.tgt_word_emb.weight, self.decoder.emb_model_proj.weight.t()))
+            else:
+                self.tgt_word_prj.weight = self.decoder.tgt_word_emb.weight
             self.x_logit_scale = (d_model ** -0.5)
         else:
             self.x_logit_scale = 1.

@@ -34,7 +34,9 @@ class Translator(object):
             d_hidden=model_opt.d_hidden,
             n_layers=model_opt.n_layers,
             n_head=model_opt.n_head,
-            dropout=model_opt.dropout)
+            dropout=model_opt.dropout,
+            src_emb_file=model_opt.src_emb_file,
+            tgt_emb_file=model_opt.tgt_emb_file)
 
         self.state_dict = checkpoint['model']
         model.load_state_dict(self.state_dict)
