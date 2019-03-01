@@ -65,13 +65,13 @@ class Encoder(nn.Module):
             n_src_vocab, len_max_seq, d_word_vec,
             n_layers, n_head, d_k, d_v,
             d_model, d_inner, dropout=0.1,
-            emb_file='', use_pretrained_emb=False):
+            emb_file=''):
 
         super().__init__()
 
         n_position = len_max_seq + 1
 
-        if use_pretrained_emb:
+        if emb_file != '':
             self.src_word_emb = nn.Embedding.from_pretrained(
                 get_pretrained_emb(emb_file), freeze=True)
         else:
@@ -151,12 +151,12 @@ class Decoder(nn.Module):
             n_tgt_vocab, len_max_seq, d_word_vec,
             n_layers, n_head, d_k, d_v,
             d_model, d_inner, dropout=0.1,
-            emb_file='', use_pretrained_emb=False):
+            emb_file=''):
 
         super().__init__()
         n_position = len_max_seq + 1
 
-        if use_pretrained_emb:
+        if emb_file != '':
             self.tgt_word_emb = nn.Embedding.from_pretrained(
                 get_pretrained_emb(emb_file), freeze=True)
         else:
@@ -218,7 +218,7 @@ class Transformer(nn.Module):
             n_layers=6, n_head=8, d_k=64, d_v=64, dropout=0.1,
             tgt_emb_prj_weight_sharing=True,
             emb_src_tgt_weight_sharing=True,
-            emb_file='', use_pretrained_emb=False):
+            src_emb_file='', tgt_emb_file=''):
 
         super().__init__()
 
@@ -226,8 +226,7 @@ class Transformer(nn.Module):
             n_src_vocab=n_src_vocab, len_max_seq=len_max_seq,
             d_word_vec=d_word_vec, d_model=d_model, d_inner=d_inner,
             n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
-            dropout=dropout, emb_file=emb_file,
-            use_pretrained_emb=use_pretrained_emb)
+            dropout=dropout, emb_file=src_emb_file)
 
         self.session = Session(d_model, d_hidden, batch_size, dropout)
 
@@ -235,8 +234,7 @@ class Transformer(nn.Module):
             n_tgt_vocab=n_tgt_vocab, len_max_seq=len_max_seq,
             d_word_vec=d_word_vec, d_model=d_model, d_inner=d_inner,
             n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
-            dropout=dropout, emb_file=emb_file,
-            use_pretrained_emb=use_pretrained_emb)
+            dropout=dropout, emb_file=tgt_emb_file)
 
         self.tgt_word_prj = nn.Linear(d_model, n_tgt_vocab, bias=False)
         nn.init.xavier_normal_(self.tgt_word_prj.weight)
