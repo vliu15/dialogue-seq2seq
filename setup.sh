@@ -36,12 +36,6 @@ if [ ! -f data/glove/glove.6B.300d.txt ]; then
     wget http://nlp.stanford.edu/data/glove.6B.zip && unzip glove.6B.zip -d data/glove && rm glove.6B.zip
 fi
 
-# load vocab into python-loadable
-if [ ! -f data/glove/word2idx.pkl ]; then
-    # pickle dump glove word2idx, idx2emb
-    python3 load_glove.py
-fi
-
 # perform preprocessing
 python3 preprocess.py -train_file data/iac/train.pkl -valid_file data/iac/val.pkl -test_file data/iac/test.pkl \
     -save_dir data/iac -share_vocab -use_glove_emb
