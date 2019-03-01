@@ -26,10 +26,10 @@ def create_glove_emb_table(word2idx, split_name, glove_path='data/glove/glove.6B
     #- Create embedding table
     word2idx = {}
     emb_table = np.zeros(shape=(len(word2emb) + 4, glove_size))
-    emb_table[Constants.PAD] = np.zeros(shape=(glove_size))
-    emb_table[Constants.UNK] = np.zeros(shape=(glove_size))
-    emb_table[Constants.BOS] = np.zeros(shape=(glove_size))
-    emb_table[Constants.EOS] = np.zeros(shape=(glove_size))
+    emb_table[Constants.PAD] = np.random.randn(glove_size)
+    emb_table[Constants.UNK] = np.random.randn(glove_size)
+    emb_table[Constants.BOS] = np.random.randn(glove_size)
+    emb_table[Constants.EOS] = np.random.randn(glove_size)
     for idx, (word, emb) in enumerate(word2emb.items(), 4):
         emb_table[idx] = emb
         word2idx[word] = idx
