@@ -20,12 +20,18 @@ def load_glove(glove_path, glove_size):
             Constants.UNK: np.zeros(shape=(glove_size)),
         }
 
-        for idx, line in tqdm(enumerate(f)):
+        for idx, line in tqdm(enumerate(f, 4)):
             split_line = line.split()
             word = split_line[0]
             embedding = np.array([float(val) for val in split_line[1:]])
-            word2idx[word] = len(word2idx)
-            idx2emb[len(word2idx)] = embedding
+            word2idx[word] = idx
+            idx2emb[idx] = embedding
+
+    #- Create embedding table
+    emb_table = np.zeros(shape=(len(word2idx), glove_size))
+    for i in range(len(word2idx)):
+        emb_table[i] = idx2emb[i]
+    print(emb_table.shape)
 
     #- Create word2idx mapping
     word2idx = {
@@ -33,11 +39,6 @@ def load_glove(glove_path, glove_size):
             'src': word2idx,
             'tgt': word2idx
         }}
-
-    #- Create embedding table
-    emb_table = np.zeros(shape=(len(word2idx), glove_size))
-    for i in range(len(word2idx)):
-        emb_table[i] = idx2emb[i]
     
     #- Save vocabulary and embeddings
     with open('data/glove/word2idx.pkl', 'wb') as f:

@@ -242,7 +242,7 @@ def main():
     parser.add_argument('-lr', type=float, default=1e-3)
     parser.add_argument('-emb_file', type=str, default='')
 
-    # parser.add_argument('-d_word_vec', type=int, default=512)
+    parser.add_argument('-d_word_vec', type=int, default=300)
     # parser.add_argument('-d_hidden', type=int, default=512)
     parser.add_argument('-d_model', type=int, default=512)
     parser.add_argument('-d_inner_hid', type=int, default=512)
@@ -267,7 +267,7 @@ def main():
     opt = parser.parse_args()
     opt.cuda = not opt.no_cuda
 
-    opt.d_word_vec = opt.d_model # for residual compatibility
+    # opt.d_word_vec = opt.d_model # for residual compatibility
     opt.d_hidden = opt.d_model # for dot product attention
     opt.use_pretrained_emb = opt.emb_file != '' # for pretrained embeddings
 

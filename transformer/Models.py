@@ -54,6 +54,7 @@ def get_subsequent_mask(seq):
 def get_pretrained_emb(path):
     ''' Load pretrained embedding table from Numpy binary '''
     emb = np.load(path)
+    print(emb.shape)
     assert isinstance(emb, np.ndarray)
     return torch.FloatTensor(emb)
 
@@ -101,6 +102,8 @@ class Encoder(nn.Module):
 
         # -- Forward
         enc_output = self.src_word_emb(src_seq) + self.position_enc(src_pos)
+        print(enc_output.size())
+        enc_output = self.emb_model_proj(enc_output)
 
         for enc_layer in self.layer_stack:
             enc_output, enc_slf_attn = enc_layer(
