@@ -27,11 +27,14 @@ def load_glove(glove_path, glove_size):
             word2idx[word] = len(word2idx)
             idx2emb[len(word2idx)] = embedding
 
+    #- Create word2idx mapping
     word2idx = {
         'dict': {
             'src': word2idx,
             'tgt': word2idx
         }}
+
+    #- Create embedding table
     emb_table = np.zeros(shape=(len(word2idx), glove_size))
     for i in range(len(word2idx)):
         emb_table[i] = idx2emb[i]
