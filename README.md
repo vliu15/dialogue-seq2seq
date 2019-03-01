@@ -24,7 +24,7 @@ sh setup.sh
 ```bash
 python3 train.py -data data/iac/train.data.pt -save_model trained \
   -save_mode best -proj_share_weight -label_smoothing -embs_share_weight \
-  -src_emb_file data/glove/src_emb_table.npy -tgt_emb_file data/glove/tgt_emb_table.npy
+  -src_emb_file data/glove/src_emb_file.npy -tgt_emb_file data/glove/tgt_emb_file.npy
 ```
 > If your source and target language share one common vocabulary, use the `-embs_share_weight` flag to enable the model to share source/target word embedding.
 > If you want to use pretrained embeddings, specify the embedding table file with `emb_file`.

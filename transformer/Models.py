@@ -71,6 +71,7 @@ class Encoder(nn.Module):
 
         n_position = len_max_seq + 1
 
+        # load static embeddings only if specified
         if emb_file != '':
             self.src_word_emb = nn.Embedding.from_pretrained(
                 get_pretrained_emb(emb_file), freeze=True)
@@ -82,6 +83,7 @@ class Encoder(nn.Module):
             get_sinusoid_encoding_table(n_position, d_word_vec, padding_idx=0),
             freeze=True)
 
+        # for projecting d_word_vec into d_model only if necessary
         if d_model != d_word_vec:
             self.emb_model_proj = nn.Linear(d_word_vec, d_model)
         else:
@@ -156,6 +158,7 @@ class Decoder(nn.Module):
         super().__init__()
         n_position = len_max_seq + 1
 
+        # load static embeddings only if specified
         if emb_file != '':
             self.tgt_word_emb = nn.Embedding.from_pretrained(
                 get_pretrained_emb(emb_file), freeze=True)
@@ -167,6 +170,7 @@ class Decoder(nn.Module):
             get_sinusoid_encoding_table(n_position, d_word_vec, padding_idx=0),
             freeze=True)
 
+        # for projecting d_word_vec into d_model only if necessary
         if d_model != d_word_vec:
             self.emb_model_proj = nn.Linear(d_word_vec, d_model)
         else:
@@ -246,6 +250,8 @@ class Transformer(nn.Module):
         if tgt_emb_prj_weight_sharing:
             # Share the weight matrix between target word embedding & the final logit dense layer
             if d_word_vec != d_model:
+                # matmul for linear proj is necessary to ensure compatibility between
+                # different embedding and model sizes
                 self.tgt_word_prj.weight = nn.Parameter(torch.matmul(
                     self.decoder.tgt_word_emb.weight, self.decoder.emb_model_proj.weight.t()))
             else:
