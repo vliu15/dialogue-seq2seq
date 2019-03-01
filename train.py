@@ -240,6 +240,7 @@ def main():
     parser.add_argument('-epoch', type=int, default=10)
     parser.add_argument('-batch_size', type=int, default=4)
     parser.add_argument('-lr', type=float, default=1e-3)
+    parser.add_argument('-emb_file', type=str, default='')
 
     # parser.add_argument('-d_word_vec', type=int, default=512)
     # parser.add_argument('-d_hidden', type=int, default=512)
@@ -268,6 +269,7 @@ def main():
 
     opt.d_word_vec = opt.d_model # for residual compatibility
     opt.d_hidden = opt.d_model # for dot product attention
+    opt.use_pretrained_emb = opt.emb_file != '' # for pretrained embeddings
 
     #========= Loading Dataset =========#
     data = torch.load(opt.data)
@@ -302,7 +304,9 @@ def main():
         d_hidden=opt.d_hidden,
         n_layers=opt.n_layers,
         n_head=opt.n_head,
-        dropout=opt.dropout).to(device)
+        dropout=opt.dropout,
+        emb_file=opt.emb_file,
+        use_pretrained_emb=opt.use_pretrained_emb).to(device)
 
     model_parameters = filter(lambda p: p.requires_grad, transformer.parameters())
     n_params = sum([np.prod(p.size()) for p in model_parameters])
