@@ -1,4 +1,6 @@
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import argparse
 import numpy as np
 from nltk import word_tokenize
@@ -6,6 +8,7 @@ from tqdm import tqdm
 
 from transformer.Models import Transformer
 from transformer.Translator import Translator
+from transformer.Beam import Beam
 from transformer import Constants
 
 class Interactive(Translator):
@@ -137,13 +140,16 @@ class Interactive(Translator):
     
 
 def interactive(opt):
-    def prepare_seq(seq, max_seq_len, word2idx, device):
+    def prepare_seq(seq, max_seq_len, word2idx, device, model_batch_size):
         seq = word_tokenize(seq[:max_seq_len])
         seq = [word2idx.get(w.lower(), Constants.UNK) for w in seq]
         seq = [Constants.BOS] + seq + [Constants.EOS]
         seq = np.array(seq + [Constants.PAD] * (max_seq_len - len(seq)))
         pos = np.array([pos_i+1 if w_i != Constants.PAD else 0 for pos_i, w_i in enumerate(seq)])
-        return torch.LongTensor(seq).unsqueeze(0).to(device), torch.LongTensor(pos).unsqueeze(0).to(device)
+
+        seq = torch.LongTensor(seq).unsqueeze(0).repeat(model_batch_size, 1)
+        pos = torch.LongTensor(pos).unsqueeze(0).repeat(model_batch_size, 1)
+        return seq.to(device), pos.to(device)
 
     #- Load preprocessing file for vocabulary
     prepro = torch.load(opt.prepro_file)
@@ -154,6 +160,7 @@ def interactive(opt):
     #- Prepare interactive shell
     seq2seq = Interactive(opt)
     max_seq_len = seq2seq.model_opt.max_post_len
+    model_batch_size = seq2seq.model_opt.batch_size
     print('[Info] Model opts: {}'.format(seq2seq.model_opt))
 
     #- Interact with console
@@ -161,9 +168,10 @@ def interactive(opt):
     console_output = '[Seq2Seq] what do you have to say?\n[Human] '
     while console_input != 'exit':
         console_input = input(console_output) # get user input
-        seq, pos = prepare_seq(console_input, max_seq_len, src_word2idx, seq2seq.device)
+        seq, pos = prepare_seq(console_input, max_seq_len, src_word2idx, seq2seq.device, model_batch_size)
         console_output, _ = seq2seq.translate_batch(seq, pos)
-        console_output = '[Seq2Seq] ' + ' '.join([tgt_idx2word.get(word, Constants.UNK_WORD) for word in console_output[0]]) + '\n[Human] '
+        console_output = console_output[0][0]
+        console_output = '[Seq2Seq] ' + ' '.join([tgt_idx2word.get(word, Constants.UNK_WORD) for word in console_output]) + '\n[Human] '
     
     print('[Seq2Seq] thanks for talking with me!')
 
