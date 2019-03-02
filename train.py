@@ -275,7 +275,7 @@ def main():
     #========= Loading Dataset =========#
     data = torch.load(opt.data)
     opt.max_disc_len = data['settings'].max_disc_len
-    opt.max_token_post_len = data['settings'].max_token_post_len
+    opt.max_post_len = data['settings'].max_token_post_len
 
     training_data, validation_data = prepare_dataloaders(data, opt)
 
@@ -293,7 +293,7 @@ def main():
     transformer = Transformer(
         opt.src_vocab_size,
         opt.tgt_vocab_size,
-        opt.max_token_post_len,
+        opt.max_post_len,
         opt.batch_size,
         tgt_emb_prj_weight_sharing=opt.proj_share_weight,
         emb_src_tgt_weight_sharing=opt.embs_share_weight,

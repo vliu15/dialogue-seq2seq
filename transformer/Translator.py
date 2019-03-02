@@ -22,7 +22,7 @@ class Translator(object):
         model = Transformer(
             model_opt.src_vocab_size,
             model_opt.tgt_vocab_size,
-            model_opt.max_token_post_len,
+            model_opt.max_post_len,
             model_opt.batch_size,
             tgt_emb_prj_weight_sharing=model_opt.proj_share_weight,
             emb_src_tgt_weight_sharing=model_opt.embs_share_weight,
@@ -171,7 +171,7 @@ class Translator(object):
                 inst_idx_to_position_map = get_inst_idx_to_tensor_position_map(active_inst_idx_list)
 
                 #-- Decode
-                for len_dec_seq in tqdm(range(1, self.model_opt.max_token_post_len + 1),
+                for len_dec_seq in tqdm(range(1, self.model_opt.max_post_len + 1),
                     mininterval=2, desc='  - (Test / Words)', leave=False):
 
                     active_inst_idx_list = beam_decode_step(
