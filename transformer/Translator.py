@@ -140,6 +140,17 @@ class Translator(object):
                 all_hyp += [hyps]
             return all_hyp, all_scores
 
+        def restructure_batch(batch):
+            ''' Expects batch of structure List[seq, batch, words] 
+                Restructures to List[batch, seq, words]             '''
+            batch_size = len(batch[0])
+            seq_len = len(batch)
+            restructured = [[]] * batch_size
+            for i in range(len(batch)):
+                for j, ex in enumerate(batch[i]):
+                    batch_[j].append(ex)
+            return batch_
+
         with torch.no_grad():
             #-- Reset weights (to reset LSTM Cell weights)
             self.reload_weights()
@@ -188,9 +199,5 @@ class Translator(object):
                 #-- Accumulate per step
                 batch_hyp.append(hyp)
                 batch_scores.append(scores)
-            
-            #-- Vectorize
-            batch_hyp = torch.cat(batch_hyp, dim=1)
-            batch_scores = torch.cat(batch_scores, dim=1)
 
-        return batch_hyp, batch_scores
+        return restructure_batch(batch_hyp), restructure_batch(batch_scores)
