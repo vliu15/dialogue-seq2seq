@@ -141,8 +141,8 @@ class Translator(object):
             return all_hyp, all_scores
 
         def restructure_batch(batch):
-            ''' Expects batch of structure List[seq, batch, words] 
-                Restructures to List[batch, seq, words]             '''
+            ''' Expects batch of structure List[seq, batch, pos] 
+                Restructures to List[batch, seq, pos]             '''
             batch_size = len(batch[0])
             seq_len = len(batch)
             restructured = [[]] * batch_size
@@ -167,6 +167,7 @@ class Translator(object):
                 src_seq_step = src_seq[:, i, :].squeeze(1)
                 src_pos_step = src_pos[:, i, :].squeeze(1)
                 src_enc_step, *_ = self.model.encoder(src_seq_step, src_pos_step)
+                src_enc_step, *_ = self.model.session(src_enc_step)
 
                 #-- Repeat data for beam search
                 n_bm = self.opt.beam_size
