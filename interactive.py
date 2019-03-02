@@ -165,6 +165,7 @@ def interactive(opt):
     #- Prepare interactive shell
     seq2seq = Interactive(opt)
     max_seq_len = seq2seq.model_opt.max_seq_len
+    print('[Info] Model opts: {}'.format(seq2seq.model_opt))
 
     #- Interact with console
     console_input = ''

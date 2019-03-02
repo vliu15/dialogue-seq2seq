@@ -42,6 +42,7 @@ def main():
         collate_fn=collate_fn)
 
     translator = Translator(opt)
+    print('[Info] Model opts: {}'.format(translator.model_opt))
 
     print('[Info] Evaluate on test set.')
     with open(opt.output, 'w') as f:
