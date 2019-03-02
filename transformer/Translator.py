@@ -148,8 +148,8 @@ class Translator(object):
             restructured = [[]] * batch_size
             for i in range(len(batch)):
                 for j, ex in enumerate(batch[i]):
-                    batch_[j].append(ex)
-            return batch_
+                    restructured[j].append(ex)
+            return restructured
 
         with torch.no_grad():
             #-- Reset weights (to reset LSTM Cell weights)
