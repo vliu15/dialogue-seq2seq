@@ -170,7 +170,7 @@ def interactive(opt):
     #- Interact with console
     console_input = ''
     console_output = '[Seq2Seq] What do you have to say?\n[Human] '
-    while user_input != 'exit':
+    while console_input != 'exit':
         console_input = input(console_output) # get user input
         seq = prepare_seq(console_input, max_seq_len, src_word2idx)
         seq, pos = torch.Tensor(seq).to(seq2seq.device)
