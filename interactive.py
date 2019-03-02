@@ -7,7 +7,6 @@ from tqdm import tqdm
 from transformer.Models import Transformer
 from transformer.Translator import Translator
 from transformer import Constants
-from preprocess import convert_instance_to_idx_seq
 
 class Interactive(Translator):
     def __init__(self, opt):
@@ -102,18 +101,7 @@ class Interactive(Translator):
             return all_hyp, all_scores
 
         with torch.no_grad():
-            #-- Reset weights (to reset LSTM Cell weights)
-            self.reload_weights()
-            
-            #-- Prepare to step through sequences
-            src_seq, src_pos = src_seq.to(self.device), src_pos.to(self.device)
-            n_steps = src_seq.size(1)
-
-            batch_hyp, batch_scores = [], []
-
             #-- Encode
-            src_seq = src_seq[:, i, :].squeeze(1)
-            src_pos = src_pos[:, i, :].squeeze(1)
             src_enc, *_ = self.model.encoder(src_seq, src_pos)
             src_enc, *_ = self.model.session(src_enc)
 
@@ -150,11 +138,12 @@ class Interactive(Translator):
 
 def interactive(opt):
     def prepare_seq(seq, max_seq_len, word2idx, device):
-        seq = seq[:max_seq_len]
-        seq = convert_instance_to_idx_seq(word_tokenize(seq), src_word2idx)
-        seq = [seq + [Constants.PAD] * (max_seq_len - len(seq))]
+        seq = word_tokenize(seq[:max_seq_len])
+        seq = [word2idx.get(w.lower(), Constants.UNK) for w in seq]
+        seq = [Constants.BOS] + seq + [Constants.EOS]
+        seq = np.array(seq + [Constants.PAD] * (max_seq_len - len(seq)))
         pos = np.array([pos_i+1 if w_i != Constants.PAD else 0 for pos_i, w_i in enumerate(seq)])
-        return torch.Tensor(seq).to(device), torch.Tensor(pos).to(device)
+        return torch.LongTensor(seq).unsqueeze(0).to(device), torch.LongTensor(pos).unsqueeze(0).to(device)
 
     #- Load preprocessing file for vocabulary
     prepro = torch.load(opt.prepro_file)
@@ -169,14 +158,14 @@ def interactive(opt):
 
     #- Interact with console
     console_input = ''
-    console_output = '[Seq2Seq] What do you have to say?\n[Human] '
+    console_output = '[Seq2Seq] what do you have to say?\n[Human] '
     while console_input != 'exit':
         console_input = input(console_output) # get user input
         seq, pos = prepare_seq(console_input, max_seq_len, src_word2idx, seq2seq.device)
         console_output, _ = seq2seq.translate_batch(seq, pos)
-        console_output = '[Seq2Seq] ' + ' '.join([tgt_idx2word[word] for word in console_output[0]]) + '\n[Human] '
+        console_output = '[Seq2Seq] ' + ' '.join([tgt_idx2word.get(word, Constants.UNK_WORD) for word in console_output[0]]) + '\n[Human] '
     
-    print('[Seq2Seq] Thanks for talking with me!')
+    print('[Seq2Seq] thanks for talking with me!')
 
 
 if __name__ == "__main__":
