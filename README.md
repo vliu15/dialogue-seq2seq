@@ -28,8 +28,15 @@ python3 train.py -data data/iac/train.data.pt -save_model trained \
 ```
 > If your source and target language share one common vocabulary, use the `-embs_share_weight` flag to enable the model to share source/target word embedding if training embeddings.
 > If you want to use pretrained embeddings, specify the embedding table file with `-src_emb_file` and/or `-tgt_emb_file`.
+> If training on CUDA device, testing and interactive use must also be on CUDA.
 
 ### Testing
 ```bash
 python3 translate.py -model trained.chkpt -test_file data/iac/test.data.pt
+```
+> Batch size is same as in training to maintain `LSTMCell` hidden / cell state consistency
+
+### Interactive Use
+```bash
+python3 interactive.py -model trained.chkpt -prepro_file data/iac/train.data.pt
 ```
