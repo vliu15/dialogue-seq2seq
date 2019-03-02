@@ -149,12 +149,12 @@ class Interactive(Translator):
     
 
 def interactive(opt):
-    def prepare_seq(seq, max_seq_len, word2idx):
+    def prepare_seq(seq, max_seq_len, word2idx, device):
         seq = seq[:max_seq_len]
         seq = convert_instance_to_idx_seq(word_tokenize(seq), src_word2idx)
         seq = [seq + [Constants.PAD] * (max_seq_len - len(seq))]
         pos = np.array([pos_i+1 if w_i != Constants.PAD else 0 for pos_i, w_i in enumerate(seq)])
-        return seq, pos
+        return torch.Tensor(seq).to(device), torch.Tensor(pos).to(device)
 
     #- Load preprocessing file for vocabulary
     prepro = torch.load(opt.prepro_file)
@@ -172,10 +172,9 @@ def interactive(opt):
     console_output = '[Seq2Seq] What do you have to say?\n[Human] '
     while console_input != 'exit':
         console_input = input(console_output) # get user input
-        seq = prepare_seq(console_input, max_seq_len, src_word2idx)
-        seq, pos = torch.Tensor(seq).to(seq2seq.device)
+        seq, pos = prepare_seq(console_input, max_seq_len, src_word2idx, seq2seq.device)
         console_output, _ = seq2seq.translate_batch(seq, pos)
-        console_output = [tgt_idx2word[word] for word in console_output[0]]
+        console_output = '[Seq2Seq] ' + ' '.join([tgt_idx2word[word] for word in console_output[0]]) + '\n[Human] '
     
     print('[Seq2Seq] Thanks for talking with me!')
 
