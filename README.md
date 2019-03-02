@@ -18,6 +18,7 @@ For Python2 and Python3 dependencies, see `requirements.txt`. We assume that `py
 sh setup.sh
 ```
 > The above command downloads and preprocesses the Internet Argument Corpus v1.1 data dataset.
+
 > Note: Default preprocessing shares vocab between src / tgt, and uses GloVe pretrained embeddings.
 
 ### Training
@@ -27,7 +28,9 @@ python3 train.py -data data/iac/train.data.pt -save_model trained \
   -src_emb_file data/glove/src_emb_file.npy -tgt_emb_file data/glove/tgt_emb_file.npy
 ```
 > If your source and target language share one common vocabulary, use the `-embs_share_weight` flag to enable the model to share source/target word embedding if training embeddings.
+
 > If you want to use pretrained embeddings, specify the embedding table file with `-src_emb_file` and/or `-tgt_emb_file`.
+
 > If training on CUDA device, testing and interactive use must also be on CUDA.
 
 ### Testing
