@@ -165,17 +165,17 @@ def interactive(opt):
 
     #- Interact with console
     console_input = ''
-    console_output = '[Seq2Seq](score:--) human, what do you have to say?\n[Human] '
+    console_output = '[Seq2Seq](score:--.--) human, what do you have to say?\n[Human] '
     while console_input != 'exit':
         console_input = input(console_output) # get user input
         seq, pos = prepare_seq(console_input, max_seq_len, src_word2idx, seq2seq.device, model_batch_size)
         console_output, score = seq2seq.translate_batch(seq, pos)
         console_output = console_output[0][0]
-        score = score[0]
-        console_output = '[Seq2Seq](score:{2.2f}) '.format(score.item()) + \
+        score = score[0][0]
+        console_output = '[Seq2Seq](score:{score:2.2f}) '.format(score=score.item()) + \
             ' '.join([tgt_idx2word.get(word, Constants.UNK_WORD) for word in console_output]) + '\n[Human] '
     
-    print('[Seq2Seq](score:--) thanks for talking with me!')
+    print('[Seq2Seq](score:--.--) thanks for talking with me!')
 
 
 if __name__ == "__main__":
