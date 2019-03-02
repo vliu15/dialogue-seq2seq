@@ -153,7 +153,7 @@ def interactive(opt):
         seq = seq[:max_seq_len]
         seq = convert_instance_to_idx_seq(word_tokenize(seq), src_word2idx)
         seq = [seq + [Constants.PAD] * (max_seq_len - len(seq))]
-        pos = np.array([pos_i+1 if w_i != Constants.PAD else 0 for w_i in enumerate(seq)])
+        pos = np.array([pos_i+1 if w_i != Constants.PAD else 0 for pos_i, w_i in enumerate(seq)])
         return seq, pos
 
     #- Load preprocessing file for vocabulary
