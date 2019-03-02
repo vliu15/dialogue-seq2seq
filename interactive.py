@@ -102,16 +102,24 @@ class Interactive(Translator):
             return all_hyp, all_scores
 
         with torch.no_grad():
+            #-- Reset weights (to reset LSTM Cell weights)
+            self.reload_weights()
+            
             #-- Prepare to step through sequences
             src_seq, src_pos = src_seq.to(self.device), src_pos.to(self.device)
             n_steps = src_seq.size(1)
 
+            batch_hyp, batch_scores = [], []
+
             #-- Encode
+            src_seq = src_seq[:, i, :].squeeze(1)
+            src_pos = src_pos[:, i, :].squeeze(1)
             src_enc, *_ = self.model.encoder(src_seq, src_pos)
+            src_enc, *_ = self.model.session(src_enc)
 
             #-- Repeat data for beam search
             n_bm = self.opt.beam_size
-            n_inst, len_s, d_h = src_enc_step.size()
+            n_inst, len_s, d_h = src_enc.size()
             src_seq = src_seq.repeat(1, n_bm).view(n_inst * n_bm, len_s)
             src_enc = src_enc.repeat(1, n_bm, 1).view(n_inst * n_bm, len_s, d_h)
 
@@ -123,7 +131,8 @@ class Interactive(Translator):
             inst_idx_to_position_map = get_inst_idx_to_tensor_position_map(active_inst_idx_list)
 
             #-- Decode
-            for len_dec_seq in range(1, self.model_opt.max_token_post_len + 1):
+            for len_dec_seq in tqdm(range(1, self.model_opt.max_post_len + 1),
+                mininterval=2, desc='  - (Test / Words)', leave=False):
 
                 active_inst_idx_list = beam_decode_step(
                     inst_dec_beams, len_dec_seq, src_seq, src_enc, inst_idx_to_position_map, n_bm)
@@ -150,6 +159,7 @@ def interactive(opt):
     #- Load preprocessing file for vocabulary
     prepro = torch.load(opt.prepro_file)
     src_word2idx = prepro['dict']['src']
+    tgt_idx2word = {idx: word for word, idx in prepro['dict']['tgt'].items()}
     del prepro # to save memory
 
     #- Prepare interactive shell
@@ -158,14 +168,15 @@ def interactive(opt):
 
     #- Interact with console
     console_input = ''
-    console_output = 'What do you have to say?'
+    console_output = '[Seq2Seq] What do you have to say?\n[Human] '
     while user_input != 'exit':
         console_input = input(console_output) # get user input
         seq = prepare_seq(console_input, max_seq_len, src_word2idx)
         seq, pos = torch.Tensor(seq).to(seq2seq.device)
         console_output, _ = seq2seq.translate_batch(seq, pos)
+        console_output = [tgt_idx2word[word] for word in console_output[0]]
     
-    print('Thanks for talking with me!')
+    print('[Seq2Seq] Thanks for talking with me!')
 
 
 if __name__ == "__main__":
@@ -174,11 +185,11 @@ if __name__ == "__main__":
     parser.add_argument('-model', required=True, help='Path to model .pt file')
     parser.add_argument('-prepro_file', required=True, help='Path to preprocessed data for vocab')
     parser.add_argument('-beam_size', type=int, default=5, help='Beam size')
-    parser.add_argument('-n_best', type=int, default=1, help='If verbose is set, will output the n_best decoded sentences')
     parser.add_argument('-no_cuda', action='store_true')
 
     opt = parser.parse_args()
     opt.cuda = not opt.no_cuda
     opt.batch_size = 1
+    opt.n_best = 1
 
     interactive(opt)
