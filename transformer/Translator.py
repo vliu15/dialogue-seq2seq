@@ -145,8 +145,8 @@ class Translator(object):
                 Restructures to List[batch, seq, pos]             '''
             batch_size = len(batch[0])
             seq_len = len(batch)
-            restructured = [[]] * batch_size
-            for i in range(len(batch)):
+            restructured = [ [] ] * batch_size
+            for i in range(seq_len):
                 for j, ex in enumerate(batch[i]):
                     restructured[j].append(ex)
             return restructured

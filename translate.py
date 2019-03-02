@@ -18,7 +18,7 @@ def main():
     parser.add_argument('-test_file', required=True, help='Test pickle file for validation')
     parser.add_argument('-output', default='outputs.txt', help='Path to output the predictions (each line will be the decoded sequence')
     parser.add_argument('-beam_size', type=int, default=5, help='Beam size')
-    parser.add_argument('-batch_size', type=int, default=30, help='Batch size')
+    parser.add_argument('-batch_size', type=int, default=4, help='Batch size')
     parser.add_argument('-n_best', type=int, default=1, help='If verbose is set, will output the n_best decoded sentences')
     parser.add_argument('-no_cuda', action='store_true')
 
@@ -46,10 +46,11 @@ def main():
     print('[Info] Evaluate on test set.')
     with open(opt.output, 'w') as f:
         for batch in tqdm(test_loader, mininterval=2, desc='  - (Test / Discussions)', leave=False):
-            all_hyp, all_scores = translator.translate_batch(*batch) # structure List[batch, seq, pos]
+            all_hyp, all_scores = translator.translate_batch(*batch) # structure: List[batch, seq, pos]
             for disc in all_hyp:
                 f.write('[')
                 for post in disc:
+                    post = post[0]
                     pred_post = ' '.join([test_loader.dataset.tgt_idx2word[word] for word in post])
                     f.write('\t' + pred_post + '\n')
                 f.write(']\n')
