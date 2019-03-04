@@ -34,10 +34,12 @@ class AttentionLayer(nn.Module):
         else:
             self.attn = DotProductAttention(d_model, d_hidden)
         self.dropout = nn.Dropout(dropout)
+        self.layernorm = nn.LayerNorm(d_model)
 
     def forward(self, enc_output, ses_hidden):
-        attn_distr = self.attn(enc_output, ses_hidden)
-        attn_output = self.dropout(attn_distr * enc_output)
+        attn_output = self.attn(enc_output, ses_hidden)
+        attn_output = self.dropout(attn_output * enc_output)
+        attn_output = self.layernorm(enc_output + attn_output)
 
         return attn_output, attn_distr
 
