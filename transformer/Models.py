@@ -74,7 +74,7 @@ class Encoder(nn.Module):
         # load static embeddings only if specified
         if emb_file != '':
             self.src_word_emb = nn.Embedding.from_pretrained(
-                get_pretrained_emb(emb_file), freeze=True)
+                get_pretrained_emb(emb_file), freeze=False)
         else:
             self.src_word_emb = nn.Embedding(
                 n_src_vocab, d_word_vec, padding_idx=Constants.PAD)
@@ -161,7 +161,7 @@ class Decoder(nn.Module):
         # load static embeddings only if specified
         if emb_file != '':
             self.tgt_word_emb = nn.Embedding.from_pretrained(
-                get_pretrained_emb(emb_file), freeze=True)
+                get_pretrained_emb(emb_file), freeze=False)
         else:
             self.tgt_word_emb = nn.Embedding(
                 n_tgt_vocab, d_word_vec, padding_idx=Constants.PAD)
