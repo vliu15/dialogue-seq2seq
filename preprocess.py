@@ -5,6 +5,7 @@ import argparse
 import pickle
 import torch
 import numpy as np
+from load_glove import create_glove_emb_table
 
 def process_sequence(seq, max_post_len, max_disc_len, keep_case):
     ''' Trim to max lengths '''
@@ -167,6 +168,7 @@ def main():
     parser.add_argument('-keep_case', action='store_true')
     parser.add_argument('-share_vocab', action='store_true')
     parser.add_argument('-vocab', default=None)
+    parser.add_argument('-use_glove_emb', action='store_true')
 
     opt = parser.parse_args()
     opt.max_token_post_len = opt.max_post_len + 2 # include the <s> and </s>
@@ -224,6 +226,11 @@ def main():
             src_word2idx = build_vocab_idx(train_src_word_insts, opt.min_word_count)
             print('[Info] Build vocabulary for target.')
             tgt_word2idx = build_vocab_idx(train_tgt_word_insts, opt.min_word_count)
+
+    ##-- generate glove embedding tables if using them
+    if opt.use_glove_emb:
+        src_word2idx = create_glove_emb_table(src_word2idx, 'src')
+        tgt_word2idx = create_glove_emb_table(tgt_word2idx, 'tgt')
 
     ##-- map word to index
     print('[Info] Convert source word instances into sequences of word index.')

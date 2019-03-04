@@ -271,7 +271,10 @@ def main():
     parser.add_argument('-batch_size', type=int, default=4)
     parser.add_argument('-lr', type=float, default=1e-3)
 
-    # parser.add_argument('-d_word_vec', type=int, default=512)
+    parser.add_argument('-src_emb_file', type=str, default='')
+    parser.add_argument('-tgt_emb_file', type=str, default='')
+
+    parser.add_argument('-d_word_vec', type=int, default=300)
     # parser.add_argument('-d_hidden', type=int, default=512)
     parser.add_argument('-d_model', type=int, default=512)
     parser.add_argument('-d_inner_hid', type=int, default=512)
@@ -297,7 +300,7 @@ def main():
     opt = parser.parse_args()
     opt.cuda = not opt.no_cuda
 
-    opt.d_word_vec = opt.d_model # for residual compatibility
+    # opt.d_word_vec = opt.d_model # for residual compatibility
     opt.d_hidden = opt.d_model # for dot product attention
 
     #========= Loading Dataset =========#
@@ -334,7 +337,9 @@ def main():
         n_layers=opt.n_layers,
         n_head=opt.n_head,
         dropout=opt.dropout,
-        train_for_mmi_loss=opt.loss_mmi).to(device)
+        train_for_mmi_loss=opt.loss_mmi,
+        src_emb_file=opt.src_emb_file,
+        tgt_emb_file=opt.tgt_emb_file).to(device)
 
     model_parameters = filter(lambda p: p.requires_grad, transformer.parameters())
     n_params = sum([np.prod(p.size()) for p in model_parameters])
