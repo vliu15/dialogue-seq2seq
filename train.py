@@ -17,14 +17,15 @@ from dataset import TranslationDataset, paired_collate_fn
 from transformer.Models import Transformer
 from transformer.Optim import ScheduledOptim
 
-def cal_performance(pred, gold, smoothing=False):
+def cal_performance(pred, gold, smoothing=False, mmi=False):
     ''' Apply label smoothing if needed '''
 
-    # Check if pred dimension is 3 and that dim_0 is 2. If so, this is MMI.
-    if len(list(pred.shape)) == 3 and pred.shape[0] == 2:
+    # Split the mmi dimention into two and calculate. 
+    if mmi:
         # calculate MMI Loss
-        loss = cal_mmi_loss(pred, gold)
-        pred = (pred[0] - pred[1]).max(1)[1]
+        pred_session, pred_no_session = torch.split(pred, int(pred.shape[0]/2), dim=0)
+        loss = cal_mmi_loss(pred_session, pred_no_session, gold)
+        pred = (pred_session - pred_no_session).max(1)[1]
     else:
         # calculate CE Loss
         loss = cal_loss(pred, gold, smoothing)
@@ -36,19 +37,20 @@ def cal_performance(pred, gold, smoothing=False):
     n_correct = n_correct.masked_select(non_pad_mask).sum().item()
     return loss, n_correct
 
-def cal_mmi_loss(pred, gold):
+def cal_mmi_loss(pred_session, pred_no_session, gold, smoothing=True):
     '''Calculate mmi loss with smoothing'''
 
     gold = gold.contiguous().view(-1)
 
-    eps = 0.1
-    n_class = pred.size(2)
+    one_hot = torch.zeros_like(pred_session).scatter(1, gold.view(-1, 1), 1)
 
-    one_hot = torch.zeros_like(pred[0]).scatter(1, gold.view(-1, 1), 1)
-    one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_class - 1)
+    if smoothing:
+        eps = 0.1
+        n_class = pred_session.size(1)
+        one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_class - 1)
 
-    ses_output_sftmx = F.log_softmax(pred[0], dim=1)
-    no_ses_outout_sftmx = F.log_softmax(pred[1], dim=1)
+    ses_output_sftmx = F.log_softmax(pred_session, dim=1)
+    no_ses_outout_sftmx = F.log_softmax(pred_no_session, dim=1)
     final_sftmax = ses_output_sftmx - no_ses_outout_sftmx
 
     non_pad_mask = gold.ne(Constants.PAD)
@@ -79,7 +81,7 @@ def cal_loss(pred, gold, smoothing):
     return loss
 
 
-def train_epoch(model, training_data, optimizer, device, smoothing):
+def train_epoch(model, training_data, optimizer, device, smoothing, mmi):
     ''' Epoch operation in training phase'''
 
     model.train()
@@ -113,9 +115,9 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
             # Shapes:
             #   src_seq[:, i, :].squeeze(1): [batch_size, max_post_len]
             #   if mmi:
-            #       pred: [2, max_post_len - 1, tgt_vocab_size] # index 0: session estimate, index 1: no session estimate.
+            #       pred: [2 * (max_post_len - 1), tgt_vocab_size] # first half: session, session half: no session.
             #   else:
-            #       pred: [   max_post_len - 1, tgt_vocab_size]
+            #       pred: [max_post_len - 1, tgt_vocab_size]
             pred = model(
                 src_seq[:, i, :].squeeze(1), src_pos[:, i, :].squeeze(1),
                 tgt_seq[:, i, :].squeeze(1), tgt_pos[:, i, :].squeeze(1))
@@ -131,7 +133,7 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
             #   preds[i]:                   [batch_size * max_post_len, vocab_size]
             #   gold[:, i, :].squeeze(1):   [batch_size, max_post_len] 
             # Gold gets flattened during loss calculation.
-            loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=smoothing)
+            loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=smoothing, mmi=mmi)
             # use total loss
             loss += loss_
             # track total number of correct words
@@ -150,7 +152,7 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
     accuracy = n_word_correct/n_word_total
     return loss_per_word, accuracy
 
-def eval_epoch(model, validation_data, device):
+def eval_epoch(model, validation_data, device, mmi):
     ''' Epoch operation in evaluation phase 
     Notes:
         1) See train loop for shape information
@@ -185,7 +187,7 @@ def eval_epoch(model, validation_data, device):
             loss = 0
             n_correct = 0
             for i in range(n_steps):
-                loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=False)
+                loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=False, mmi=mmi)
                 loss += loss_
                 n_correct += n_correct_
 
@@ -221,14 +223,14 @@ def train(model, training_data, validation_data, optimizer, device, opt):
 
         start = time.time()
         train_loss, train_accu = train_epoch(
-            model, training_data, optimizer, device, smoothing=opt.label_smoothing)
+            model, training_data, optimizer, device, smoothing=opt.label_smoothing, mmi=opt.loss_mmi)
         print('  - (Training)   ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
               'loss/word: {loss:8.5f}, elapse: {elapse:3.3f} min'.format(
                   ppl=math.exp(min(train_loss, 100)), accu=100*train_accu,
                   loss=train_loss, elapse=(time.time()-start)/60))
 
         start = time.time()
-        valid_loss, valid_accu = eval_epoch(model, validation_data, device)
+        valid_loss, valid_accu = eval_epoch(model, validation_data, device, mmi=opt.loss_mmi)
         print('  - (Validation) ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
                 'loss/word: {loss:8.5f}, elapse: {elapse:3.3f} min'.format(
                     ppl=math.exp(min(valid_loss, 100)), accu=100*valid_accu,
@@ -352,7 +354,7 @@ def main():
         lr=opt.lr
     )
 
-    train(transformer, training_data, validation_data, optimizer, device ,opt)
+    train(transformer, training_data, validation_data, optimizer, device, opt)
 
 
 def prepare_dataloaders(data, opt):

@@ -242,8 +242,6 @@ class Transformer(nn.Module):
             dropout=dropout, emb_file=tgt_emb_file)
 
         self.tgt_word_prj = nn.Linear(d_model, n_tgt_vocab, bias=False)
-        if train_for_mmi_loss:
-            self.tgt_word_no_session_prj = nn.Linear(d_model, n_tgt_vocab, bias=False)
         nn.init.xavier_normal_(self.tgt_word_prj.weight)
 
         # assert d_model == d_word_vec, \
@@ -281,18 +279,13 @@ class Transformer(nn.Module):
         ses_output, *_ = self.session(enc_output)
         # Output size:
         #   1) enc_output, ses_output: [batch_size, max_post_len, d_hidden]
+        dec_output = None
         if self.train_for_mmi_loss:
             ses_output = torch.cat((ses_output, enc_output), dim=0) # Size [batch_size * 2, max_post_len, d_hidden]
             new_tgt_seq, new_tgt_pos, new_src_seq = tgt_seq.repeat((2, 1)), tgt_pos.repeat((2, 1)), src_seq.repeat((2, 1)) # Size [batch_size*2, max_post_len - (0 or 1)]
             dec_output, *_ = self.decoder(new_tgt_seq, new_tgt_pos, new_src_seq, ses_output)
-
-            dec_output_session, dec_output_no_session = torch.split(dec_output, int(dec_output.shape[0]/2), dim=0)
-            seq_logit = self.tgt_word_prj(dec_output_session) * self.x_logit_scale
-            seq_logit_no_session_prj = self.tgt_word_no_session_prj(dec_output_no_session) * self.x_logit_scale
-            seq_logit = seq_logit.view(-1, seq_logit.size(2))
-            seq_logit_no_session_prj = seq_logit_no_session_prj.view(-1, seq_logit_no_session_prj.size(2))
-            return torch.cat((seq_logit.unsqueeze(0), seq_logit_no_session_prj.unsqueeze(0)), dim=0)
         else:
             dec_output, *_ = self.decoder(tgt_seq, tgt_pos, src_seq, ses_output)
-            seq_logit = self.tgt_word_prj(dec_output) * self.x_logit_scale
-            return seq_logit.view(-1, seq_logit.size(2))
+
+        seq_logit = self.tgt_word_prj(dec_output) * self.x_logit_scale
+        return seq_logit.view(-1, seq_logit.size(2))
