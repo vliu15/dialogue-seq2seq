@@ -39,7 +39,7 @@ class AttentionLayer(nn.Module):
     def forward(self, enc_output, ses_hidden):
         attn_distr = self.attn(enc_output, ses_hidden)
         attn_output = self.dropout(attn_distr * enc_output)
-        attn_output = self.layernorm(enc_output + attn_output)
+        attn_output = self.layernorm(attn_output)
 
         return attn_output, attn_distr
 
