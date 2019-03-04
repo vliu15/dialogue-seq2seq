@@ -20,16 +20,42 @@ from transformer.Optim import ScheduledOptim
 def cal_performance(pred, gold, smoothing=False):
     ''' Apply label smoothing if needed '''
 
-    loss = cal_loss(pred, gold, smoothing)
-
-    pred = pred.max(1)[1]
+    # Check if pred dimension is 3 and that dim_0 is 2. If so, this is MMI.
+    if len(list(pred.shape)) == 3 and pred.shape[0] == 2:
+        # calculate MMI Loss
+        loss = cal_mmi_loss(pred, gold)
+        pred = (pred[0] - pred[1]).max(1)[1]
+    else:
+        # calculate CE Loss
+        loss = cal_loss(pred, gold, smoothing)
+        pred = pred.max(1)[1]
+    
     gold = gold.contiguous().view(-1)
     non_pad_mask = gold.ne(Constants.PAD)
     n_correct = pred.eq(gold)
     n_correct = n_correct.masked_select(non_pad_mask).sum().item()
-
     return loss, n_correct
 
+def cal_mmi_loss(pred, gold):
+    '''Calculate mmi loss with smoothing'''
+
+    gold = gold.contiguous().view(-1)
+
+    eps = 0.1
+    n_class = pred.size(2)
+
+    one_hot = torch.zeros_like(pred[0]).scatter(1, gold.view(-1, 1), 1)
+    one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_class - 1)
+
+    ses_output_sftmx = F.log_softmax(pred[0], dim=1)
+    no_ses_outout_sftmx = F.log_softmax(pred[1], dim=1)
+    final_sftmax = ses_output_sftmx - no_ses_outout_sftmx
+
+    non_pad_mask = gold.ne(Constants.PAD)
+    loss = -(one_hot * final_sftmax).sum(dim=1)
+    loss = loss.masked_select(non_pad_mask).sum() 
+
+    return loss
 
 def cal_loss(pred, gold, smoothing):
     ''' Calculate cross entropy loss, apply label smoothing if needed. '''
@@ -86,6 +112,10 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
 
             # Shapes:
             #   src_seq[:, i, :].squeeze(1): [batch_size, max_post_len]
+            #   if mmi:
+            #       pred: [2, max_post_len - 1, tgt_vocab_size] # index 0: session estimate, index 1: no session estimate.
+            #   else:
+            #       pred: [   max_post_len - 1, tgt_vocab_size]
             pred = model(
                 src_seq[:, i, :].squeeze(1), src_pos[:, i, :].squeeze(1),
                 tgt_seq[:, i, :].squeeze(1), tgt_pos[:, i, :].squeeze(1))
