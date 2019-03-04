@@ -24,7 +24,7 @@ def cal_performance(pred, gold, smoothing=False, mmi=False):
     if mmi:
         # calculate MMI Loss
         pred_session, pred_no_session = torch.split(pred, int(pred.shape[0]/2), dim=0)
-        loss = cal_mmi_loss(pred_session, pred_no_session, gold)
+        loss = cal_mmi_loss(pred_session, pred_no_session, gold, smoothing=smoothing)
         pred = (pred_session - pred_no_session).max(1)[1]
     else:
         # calculate CE Loss
