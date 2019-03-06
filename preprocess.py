@@ -105,6 +105,7 @@ def prune(src_word_insts, tgt_word_insts, split_name):
         print('[Warning] There are {} mismatches in {} sequences.'.format(mismatch_count, split_name))
 
     # filter empty instances and sequences
+    empty_count = 0
     src, tgt = [], []
     # iterate per instance
     for src_inst, tgt_inst in zip(src_word_insts, tgt_word_insts):
@@ -117,6 +118,10 @@ def prune(src_word_insts, tgt_word_insts, split_name):
         if s and t:
             src.append(s)
             tgt.append(t)
+        else:
+            empty_count += 1
+    if empty_count > 0:
+        print('[Info] There are {} empty sequences.'.format(empty_count))
 
     return src, tgt
 
@@ -142,7 +147,7 @@ def build_vocab_idx(word_insts, min_word_count):
     ignored_word_count = 0
     for word, count in word_count.items():
         if word not in word2idx:
-            if count > min_word_count:
+            if count >= min_word_count:
                 word2idx[word] = len(word2idx)
             else:
                 ignored_word_count += 1
@@ -152,19 +157,42 @@ def build_vocab_idx(word_insts, min_word_count):
     print('[Info] Ignored word count = {}'.format(ignored_word_count))
     return word2idx
 
-def convert_instance_to_idx_seq(word_insts, word2idx):
+def convert_instance_to_idx_seq(word_insts, word2idx, unk_prop_max, split_name):
     ''' Map words to idx sequence '''
-    return [[[word2idx.get(w, Constants.UNK) for w in seq] for seq in thread] for thread in word_insts]
+    def check_unk_prop(d):
+        # p is a post of word indices
+        count_unks = lambda p: sum(1 for t in p if t == Constants.UNK)
+
+        num_unks = float(sum(count_unks(p) for p in d))
+        num_toks = float(sum(len(p) for p in d))
+        prop = num_unks / num_toks <= unk_prop_max
+        return prop
+
+    above_max_count = 0
+    src_idx_insts, tgt_idx_insts = [], []
+    for src_disc, tgt_disc in word_insts:
+        src_idx = [[word2idx.get(word, Constants.UNK) for word in post] for post in src_disc]
+        tgt_idx = [[word2idx.get(word, Constants.UNK) for word in post] for post in tgt_disc]
+        if check_unk_prop(src_idx) and check_unk_prop(tgt_idx):
+            src_idx_insts.append(src_idx)
+            tgt_idx_insts.append(tgt_idx)
+        else:
+            above_max_count += 1
+
+    print('[Info] Number of {} examples above <unk> threshold of {}: {}'.format(split_name, unk_prop_max, above_max_count))
+
+    return src_idx_insts, tgt_idx_insts
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-train_file', required=True)
+    parser.add_argument('-train_file', required=True, help='If multiple, delimit files with commas.')
     parser.add_argument('-valid_file', required=True)
     parser.add_argument('-test_file', required=True)
     parser.add_argument('-save_dir', required=True)
-    parser.add_argument('-max_post_len', type=int, default=50)
-    parser.add_argument('-max_disc_len', type=int, default=50)
-    parser.add_argument('-min_word_count', type=int, default=1)
+    parser.add_argument('-max_post_len', type=int, default=100)
+    parser.add_argument('-max_disc_len', type=int, default=100)
+    parser.add_argument('-min_word_count', type=int, default=1)     # set to 1.0 to include all unique tokens
+    parser.add_argument('-unk_prop_max', type=float, default=0.075)  # set to 1.0 to disregard <unk> proportions
     parser.add_argument('-keep_case', action='store_true')
     parser.add_argument('-share_vocab', action='store_true')
     parser.add_argument('-vocab', default=None)
@@ -232,18 +260,26 @@ def main():
     ##-- generate glove embedding tables if using them
     if opt.use_glove_emb:
         src_word2idx = create_glove_emb_table(src_word2idx, 'src')
-        tgt_word2idx = create_glove_emb_table(tgt_word2idx, 'tgt')
+        if opt.share_vocab:
+            tgt_word2idx = src_word2idx
+        else:
+            tgt_word2idx = create_glove_emb_table(tgt_word2idx, 'tgt')
 
     ##-- map word to index
-    print('[Info] Convert source word instances into sequences of word index.')
-    train_src_insts = convert_instance_to_idx_seq(train_src_word_insts, src_word2idx)
-    val_src_insts = convert_instance_to_idx_seq(val_src_word_insts, src_word2idx)
-    test_src_insts = convert_instance_to_idx_seq(test_src_word_insts, src_word2idx)
+    print('[Info] Convert training word instances into sequences of word index.')
+    train_src_insts, train_tgt_insts = convert_instance_to_idx_seq(
+        zip(train_src_word_insts, train_tgt_word_insts), src_word2idx, opt.unk_prop_max, 'train')
+    print('[Info] Final training set size: {}'.format(len(train_src_insts)))
 
-    print('[Info] Convert target word instances into sequences of word index.')
-    train_tgt_insts = convert_instance_to_idx_seq(train_tgt_word_insts, tgt_word2idx)
-    val_tgt_insts = convert_instance_to_idx_seq(val_tgt_word_insts, tgt_word2idx)
-    test_tgt_insts = convert_instance_to_idx_seq(test_tgt_word_insts, tgt_word2idx)
+    print('[Info] Convert validation word instances into sequences of word index.')
+    val_src_insts, val_tgt_insts = convert_instance_to_idx_seq(
+        zip(val_src_word_insts, val_tgt_word_insts), src_word2idx, opt.unk_prop_max, 'valid')
+    print('[Info] Final validation set size: {}'.format(len(val_src_insts)))
+
+    print('[Info] Convert testing word instances into sequences of word index.')
+    test_src_insts, test_tgt_insts = convert_instance_to_idx_seq(
+        zip(test_src_word_insts, test_tgt_word_insts), src_word2idx, opt.unk_prop_max, 'test')
+    print('[Info] Final testing set size: {}'.format(len(test_src_insts)))
     
     ##-- training data
     train_data = {

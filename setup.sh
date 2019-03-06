@@ -8,13 +8,13 @@ python -c "import nltk; nltk.download('punkt')"
 pip3 install nltk torch torchvision numpy tqdm
 python3 -c "import nltk; nltk.download('punkt')"
 
-mkdir -p data/iac
-
 # download iacorpus dataset
 if [ ! -d data/iac_v1.1 ]; then
     # get dataset and code
     wget http://nldslab.soe.ucsc.edu/iac/iac_v1.1.zip && unzip iac_v1.1.zip -d data && rm iac_v1.1.zip
 fi
+
+mkdir -p data/iac
 
 # load dataset into python-loadable
 if [ ! -f data/iac/test.pkl ]; then
@@ -23,8 +23,7 @@ if [ ! -f data/iac/test.pkl ]; then
     cd data/iac_v1.1/code && python load_iac.py
 
     # restructure data folder
-    cd ../../ && mkdir iac
-    mv iac_v1.1/*pkl iac
+    cd ../../ && mv iac_v1.1/*pkl iac
     cd ..
 fi
 
