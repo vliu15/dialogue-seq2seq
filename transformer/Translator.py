@@ -140,6 +140,17 @@ class Translator(object):
                 all_hyp += [hyps]
             return all_hyp, all_scores
 
+        def restructure_batch(batch):
+            ''' Expects batch of structure List[seq, batch, pos] 
+                Restructures to List[batch, seq, pos]             '''
+            batch_size = len(batch[0])
+            seq_len = len(batch)
+            restructured = [ [] ] * batch_size
+            for i in range(seq_len):
+                for j, ex in enumerate(batch[i]):
+                    restructured[j].append(ex)
+            return restructured
+
         with torch.no_grad():
             #-- Reset weights (to reset LSTM Cell weights)
             self.reload_weights()
@@ -156,6 +167,7 @@ class Translator(object):
                 src_seq_step = src_seq[:, i, :].squeeze(1)
                 src_pos_step = src_pos[:, i, :].squeeze(1)
                 src_enc_step, *_ = self.model.encoder(src_seq_step, src_pos_step)
+                src_enc_step, *_ = self.model.session(src_enc_step)
 
                 #-- Repeat data for beam search
                 n_bm = self.opt.beam_size
@@ -171,7 +183,7 @@ class Translator(object):
                 inst_idx_to_position_map = get_inst_idx_to_tensor_position_map(active_inst_idx_list)
 
                 #-- Decode
-                for len_dec_seq in tqdm(range(1, self.model_opt.max_token_post_len + 1),
+                for len_dec_seq in tqdm(range(1, self.model_opt.max_post_len + 1),
                     mininterval=2, desc='  - (Test / Words)', leave=False):
 
                     active_inst_idx_list = beam_decode_step(
@@ -188,9 +200,5 @@ class Translator(object):
                 #-- Accumulate per step
                 batch_hyp.append(hyp)
                 batch_scores.append(scores)
-            
-            #-- Vectorize
-            batch_hyp = torch.cat(batch_hyp, dim=1)
-            batch_scores = torch.cat(batch_scores, dim=1)
 
-        return batch_hyp, batch_scores
+        return restructure_batch(batch_hyp), restructure_batch(batch_scores)
