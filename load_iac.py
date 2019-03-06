@@ -39,8 +39,15 @@ def main():
     with open('../test.pkl', 'wb') as f:
         pickle.dump(test, f)
     print('[Info] Saving training set...')
-    with open('../train.pkl', 'wb') as f:
-        pickle.dump(train, f)
+    shards = len(train)//4
+    with open('../train.1.pkl', 'wb') as f:
+        pickle.dump(train[:shards], f)
+    with open('../train.2.pkl', 'wb') as f:
+        pickle.dump(train[shards:2*shards], f)
+    with open('../train.3.pkl', 'wb') as f:
+        pickle.dump(train[2*shards:3*shards], f)
+    with open('../train.4.pkl', 'wb') as f:
+        pickle.dump(train[3*shards:], f)
 
 if __name__ == "__main__":
     main()

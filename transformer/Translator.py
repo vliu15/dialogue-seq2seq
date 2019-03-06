@@ -15,7 +15,10 @@ class Translator(object):
         self.opt = opt
         self.device = torch.device('cuda' if opt.cuda else 'cpu')
 
-        checkpoint = torch.load(opt.model)
+        try:
+            checkpoint = torch.load(opt.model)
+        except:
+            checkpoint = torch.load(opt.model, map_location=lambda storage, location: storage)
         model_opt = checkpoint['settings']
         self.model_opt = model_opt
 
@@ -35,6 +38,7 @@ class Translator(object):
             n_layers=model_opt.n_layers,
             n_head=model_opt.n_head,
             dropout=model_opt.dropout,
+            train_for_mmi_loss=False,
             src_emb_file=model_opt.src_emb_file,
             tgt_emb_file=model_opt.tgt_emb_file)
 

@@ -164,7 +164,7 @@ def main():
     parser.add_argument('-save_dir', required=True)
     parser.add_argument('-max_post_len', type=int, default=50)
     parser.add_argument('-max_disc_len', type=int, default=50)
-    parser.add_argument('-min_word_count', type=int, default=5)
+    parser.add_argument('-min_word_count', type=int, default=1)
     parser.add_argument('-keep_case', action='store_true')
     parser.add_argument('-share_vocab', action='store_true')
     parser.add_argument('-vocab', default=None)
@@ -175,8 +175,10 @@ def main():
 
     ##-- training set
     print('[Info] Load training set.')
-    with open(opt.train_file, 'rb') as f:
-        train = pickle.load(f)
+    train = []
+    for train_file in opt.train_file.split(','):
+        with open(train_file, 'rb') as f:
+            train += pickle.load(f)
     train_src_word_insts, train_tgt_word_insts = read_instances(
         train, opt.max_post_len, opt.max_disc_len, opt.keep_case, 'train')
     # prune for mismatches and empty instances / sequences
