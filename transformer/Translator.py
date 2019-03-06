@@ -18,7 +18,7 @@ class Translator(object):
         try:
             checkpoint = torch.load(opt.model)
         except:
-            checkpoint = torch.load(opt.model, map_location=lambda: storage, location: storage)
+            checkpoint = torch.load(opt.model, map_location=lambda storage, location: storage)
         model_opt = checkpoint['settings']
         self.model_opt = model_opt
 
