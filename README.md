@@ -13,13 +13,22 @@ We borrow the code for the Transformer encoder and decoder from [this](https://g
 ## Usage
 For Python2 and Python3 dependencies, see `requirements.txt`. We assume that `python` and `pip` correspond to Python2, and `python3` and `pip3` correspond to Python3.
 
+### Docker
+Run the following command to build and run a Docker container (without data) with all dependencies:
+```bash
+docker build -t seq2seq:latest .
+docker run -it -v $PWD:/transformer-rnn-pytorch seq2seq:latest
+```
+> The code can be found in the `/transformer-rnn-pytorch` folder.
+
+
 ### Setup: Data / Preprocessing
 ```
 sh setup.sh
 ```
 > The above command downloads and preprocesses the Internet Argument Corpus v1.1 data dataset.
 
-> Note: Default preprocessing shares vocab between src / tgt, and uses GloVe pretrained embeddings.
+> Default preprocessing shares vocab between src / tgt, and uses GloVe pretrained embeddings.
 
 ### Training
 ```bash
