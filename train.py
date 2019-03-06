@@ -28,7 +28,7 @@ def cal_performance(pred, gold, smoothing=False, mmi=False):
         pred = (pred_session - pred_no_session).max(1)[1]
     else:
         # calculate CE Loss
-        loss = cal_loss(pred, gold, smoothing)
+        loss = cal_mle_loss(pred, gold, smoothing)
         pred = pred.max(1)[1]
     
     gold = gold.contiguous().view(-1)
@@ -55,11 +55,11 @@ def cal_mmi_loss(pred_session, pred_no_session, gold, smoothing=True):
 
     non_pad_mask = gold.ne(Constants.PAD)
     loss = -(one_hot * final_sftmax).sum(dim=1)
-    loss = loss.masked_select(non_pad_mask).sum() 
+    loss = loss.masked_select(non_pad_mask).sum()
 
     return loss
 
-def cal_loss(pred, gold, smoothing):
+def cal_mle_loss(pred, gold, smoothing):
     ''' Calculate cross entropy loss, apply label smoothing if needed. '''
 
     gold = gold.contiguous().view(-1)

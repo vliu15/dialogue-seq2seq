@@ -262,7 +262,7 @@ class Transformer(nn.Module):
         dec_output = None
         if self.train_for_mmi_loss:
             ses_output = torch.cat((ses_output, enc_output), dim=0) # Size [batch_size * 2, max_post_len, d_hidden]
-            new_tgt_seq, new_tgt_pos, new_src_seq = tgt_seq.repeat((2, 1)), tgt_pos.repeat((2, 1)), src_seq.repeat((2, 1)) # Size [batch_size*2, max_post_len - (0 or 1)]
+            new_tgt_seq, new_tgt_pos, new_src_seq = tgt_seq.repeat(2, 1), tgt_pos.repeat(2, 1), src_seq.repeat(2, 1) # Size [batch_size*2, max_post_len - (0 or 1)]
             dec_output, *_ = self.decoder(new_tgt_seq, new_tgt_pos, new_src_seq, ses_output)
         else:
             dec_output, *_ = self.decoder(tgt_seq, tgt_pos, src_seq, ses_output)
