@@ -5,16 +5,10 @@ from tqdm import tqdm
 
 from transformer import Constants
 
-def create_glove_emb_table(word2idx, split_name, glove_path='data/glove/glove.6B.300d.txt', glove_size=300):
-    ''' Creates GloVe embedding table and changes word2idx '''
+def load_glove(glove_path, word2idx={}):
+    ''' Loads GloVe embeddings '''
 
-    word2idx.pop(Constants.PAD_WORD, None)
-    word2idx.pop(Constants.UNK_WORD, None)
-    word2idx.pop(Constants.BOS_WORD, None)
-    word2idx.pop(Constants.EOS_WORD, None)
     word2emb = {}
-
-    print("[Info] Load GloVe model.")
     with open(glove_path,'r', encoding="utf-8") as f:
         for line in tqdm(f):
             split_line = line.split()
@@ -23,7 +17,22 @@ def create_glove_emb_table(word2idx, split_name, glove_path='data/glove/glove.6B
                 embedding = np.array([float(val) for val in split_line[1:]])
                 word2emb[word] = embedding
 
-    #- Create embedding table
+    return word2emb
+
+def create_glove_emb_table(word2idx, split_name, glove_path='data/glove/glove.6B.300d.txt', glove_size=300):
+    ''' Creates GloVe embedding table and changes word2idx '''
+
+    #- Disregard special tokens when looking for glove pairs
+    word2idx.pop(Constants.PAD_WORD, None)
+    word2idx.pop(Constants.UNK_WORD, None)
+    word2idx.pop(Constants.BOS_WORD, None)
+    word2idx.pop(Constants.EOS_WORD, None)
+
+    #- Load GloVe model
+    print("[Info] Load GloVe model.")
+    word2emb = load_glove(glove_path, word2idx)
+
+    #- Create embedding table, randomly initialize special tokens
     word2idx = {}
     emb_table = np.zeros(shape=(len(word2emb) + 4, glove_size))
     emb_table[Constants.PAD] = np.zeros(shape=(glove_size))
