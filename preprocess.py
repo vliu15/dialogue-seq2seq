@@ -189,8 +189,8 @@ def main():
     parser.add_argument('-valid_file', required=True)
     parser.add_argument('-test_file', required=True)
     parser.add_argument('-save_dir', required=True)
-    parser.add_argument('-max_post_len', type=int, default=100)
-    parser.add_argument('-max_disc_len', type=int, default=100)
+    parser.add_argument('-max_post_len', type=int, default=50)
+    parser.add_argument('-max_disc_len', type=int, default=50)
     parser.add_argument('-min_word_count', type=int, default=1)     # set to 1.0 to include all unique tokens
     parser.add_argument('-unk_prop_max', type=float, default=0.075)  # set to 1.0 to disregard <unk> proportions
     parser.add_argument('-keep_case', action='store_true')
@@ -259,11 +259,14 @@ def main():
 
     ##-- generate glove embedding tables if using them
     if opt.use_glove_emb:
-        src_word2idx = create_glove_emb_table(src_word2idx, 'src')
+        src_word2idx, src_emb_table = create_glove_emb_table(src_word2idx, 'src')
+        np.save('data/glove/src_emb_file.npy', src_emb_table)
         if opt.share_vocab:
             tgt_word2idx = src_word2idx
+            tgt_emb_table = src_emb_table
         else:
-            tgt_word2idx = create_glove_emb_table(tgt_word2idx, 'tgt')
+            tgt_word2idx, tgt_emb_table = create_glove_emb_table(tgt_word2idx, 'tgt')
+        np.save('data/glove/tgt_emb_file.npy', tgt_emb_table)
 
     ##-- map word to index
     print('[Info] Convert training word instances into sequences of word index.')
