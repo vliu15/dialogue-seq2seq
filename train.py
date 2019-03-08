@@ -37,7 +37,7 @@ def cal_performance(pred, gold, smoothing=False, mmi=False):
     n_correct = n_correct.masked_select(non_pad_mask).sum().item()
     return loss, n_correct
 
-def cal_mmi_loss(pred_session, pred_no_session, gold, smoothing=True):
+def cal_mmi_loss(pred_session, pred_no_session, gold, smoothing=True, subtract_logits=True):
     '''Calculate mmi loss with smoothing'''
 
     gold = gold.contiguous().view(-1)
@@ -49,9 +49,12 @@ def cal_mmi_loss(pred_session, pred_no_session, gold, smoothing=True):
         n_class = pred_session.size(1)
         one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_class - 1)
 
-    ses_output_sftmx = F.log_softmax(pred_session, dim=1)
-    no_ses_outout_sftmx = F.log_softmax(pred_no_session, dim=1)
-    final_sftmax = ses_output_sftmx - no_ses_outout_sftmx
+    if subtract_logits:
+        final_sftmax = F.log_softmax(pred_session - pred_no_session, dim=1)
+    else:
+        ses_output_sftmx = F.log_softmax(pred_session, dim=1)
+        no_ses_outout_sftmx = F.log_softmax(pred_no_session, dim=1)
+        final_sftmax = ses_output_sftmx - no_ses_outout_sftmx
 
     non_pad_mask = gold.ne(Constants.PAD)
     loss = -(one_hot * final_sftmax).sum(dim=1)
