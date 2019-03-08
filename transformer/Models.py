@@ -83,12 +83,6 @@ class Encoder(nn.Module):
             get_sinusoid_encoding_table(n_position, d_word_vec, padding_idx=0),
             freeze=True)
 
-        # for projecting d_word_vec into d_model only if necessary
-        if d_model != d_word_vec:
-            self.emb_model_proj = nn.Linear(d_word_vec, d_model)
-        else:
-            self.emb_model_proj = lambda x: x
-
         self.layer_stack = nn.ModuleList([
             EncoderLayer(d_model, d_inner, n_head, d_k, d_v, dropout=dropout)
             for _ in range(n_layers)])
@@ -103,7 +97,6 @@ class Encoder(nn.Module):
 
         # -- Forward
         enc_output = self.src_word_emb(src_seq) + self.position_enc(src_pos)
-        enc_output = self.emb_model_proj(enc_output)
 
         for enc_layer in self.layer_stack:
             enc_output, enc_slf_attn = enc_layer(
@@ -170,12 +163,6 @@ class Decoder(nn.Module):
             get_sinusoid_encoding_table(n_position, d_word_vec, padding_idx=0),
             freeze=True)
 
-        # for projecting d_word_vec into d_model only if necessary
-        if d_model != d_word_vec:
-            self.emb_model_proj = nn.Linear(d_word_vec, d_model)
-        else:
-            self.emb_model_proj = lambda x: x
-
         self.layer_stack = nn.ModuleList([
             DecoderLayer(d_model, d_inner, n_head, d_k, d_v, dropout=dropout)
             for _ in range(n_layers)])
@@ -195,7 +182,6 @@ class Decoder(nn.Module):
 
         # -- Forward
         dec_output = self.tgt_word_emb(tgt_seq) + self.position_enc(tgt_pos)
-        dec_output = self.emb_model_proj(dec_output)
 
         for dec_layer in self.layer_stack:
             dec_output, dec_slf_attn, dec_enc_attn = dec_layer(
@@ -222,6 +208,7 @@ class Transformer(nn.Module):
             n_layers=6, n_head=8, d_k=64, d_v=64, dropout=0.1,
             tgt_emb_prj_weight_sharing=True,
             emb_src_tgt_weight_sharing=True,
+            train_for_mmi_loss=False,
             src_emb_file='', tgt_emb_file=''):
 
         super().__init__()
@@ -243,19 +230,13 @@ class Transformer(nn.Module):
         self.tgt_word_prj = nn.Linear(d_model, n_tgt_vocab, bias=False)
         nn.init.xavier_normal_(self.tgt_word_prj.weight)
 
-        # assert d_model == d_word_vec, \
-        # 'To facilitate the residual connections, \
-        #  the dimensions of all module outputs shall be the same.'
+        assert d_model == d_word_vec, \
+        'To facilitate the residual connections, \
+         the dimensions of all module outputs shall be the same.'
 
         if tgt_emb_prj_weight_sharing:
             # Share the weight matrix between target word embedding & the final logit dense layer
-            if d_word_vec != d_model:
-                # matmul for linear proj is necessary to ensure compatibility between
-                # different embedding and model sizes
-                self.tgt_word_prj.weight = nn.Parameter(torch.matmul(
-                    self.decoder.tgt_word_emb.weight, self.decoder.emb_model_proj.weight.t()))
-            else:
-                self.tgt_word_prj.weight = self.decoder.tgt_word_emb.weight
+            self.tgt_word_prj.weight = self.decoder.tgt_word_emb.weight
             self.x_logit_scale = (d_model ** -0.5)
         else:
             self.x_logit_scale = 1.
@@ -265,14 +246,26 @@ class Transformer(nn.Module):
             assert n_src_vocab == n_tgt_vocab, \
             "To share word embedding table, the vocabulary size of src/tgt shall be the same."
             self.encoder.src_word_emb.weight = self.decoder.tgt_word_emb.weight
+        
+        self.train_for_mmi_loss = train_for_mmi_loss
 
     def forward(self, src_seq, src_pos, tgt_seq, tgt_pos):
-
+        # Data shape notes:
+        #   1) Each of src_seq, src_pos, tgt_seq, tgt_pos shapes are [batch_size, max_post_len]
+        #   2) *_pos contains the index numbers for every position. 
         tgt_seq, tgt_pos = tgt_seq[:, :-1], tgt_pos[:, :-1]
 
         enc_output, *_ = self.encoder(src_seq, src_pos)
         ses_output, *_ = self.session(enc_output)
-        dec_output, *_ = self.decoder(tgt_seq, tgt_pos, src_seq, ses_output)
-        seq_logit = self.tgt_word_prj(dec_output) * self.x_logit_scale
+        # Output size:
+        #   1) enc_output, ses_output: [batch_size, max_post_len, d_hidden]
+        dec_output = None
+        if self.train_for_mmi_loss:
+            ses_output = torch.cat((ses_output, enc_output), dim=0) # Size [batch_size * 2, max_post_len, d_hidden]
+            new_tgt_seq, new_tgt_pos, new_src_seq = tgt_seq.repeat(2, 1), tgt_pos.repeat(2, 1), src_seq.repeat(2, 1) # Size [batch_size*2, max_post_len - (0 or 1)]
+            dec_output, *_ = self.decoder(new_tgt_seq, new_tgt_pos, new_src_seq, ses_output)
+        else:
+            dec_output, *_ = self.decoder(tgt_seq, tgt_pos, src_seq, ses_output)
 
+        seq_logit = self.tgt_word_prj(dec_output) * self.x_logit_scale
         return seq_logit.view(-1, seq_logit.size(2))

@@ -17,21 +17,49 @@ from dataset import TranslationDataset, paired_collate_fn
 from transformer.Models import Transformer
 from transformer.Optim import ScheduledOptim
 
-def cal_performance(pred, gold, smoothing=False):
+def cal_performance(pred, gold, smoothing=False, mmi=False):
     ''' Apply label smoothing if needed '''
 
-    loss = cal_loss(pred, gold, smoothing)
-
-    pred = pred.max(1)[1]
+    # Split the mmi dimention into two and calculate. 
+    if mmi:
+        # calculate MMI Loss
+        pred_session, pred_no_session = torch.split(pred, int(pred.shape[0]/2), dim=0)
+        loss = cal_mmi_loss(pred_session, pred_no_session, gold, smoothing=smoothing)
+        pred = (pred_session - pred_no_session).max(1)[1]
+    else:
+        # calculate CE Loss
+        loss = cal_mle_loss(pred, gold, smoothing)
+        pred = pred.max(1)[1]
+    
     gold = gold.contiguous().view(-1)
     non_pad_mask = gold.ne(Constants.PAD)
     n_correct = pred.eq(gold)
     n_correct = n_correct.masked_select(non_pad_mask).sum().item()
-
     return loss, n_correct
 
+def cal_mmi_loss(pred_session, pred_no_session, gold, smoothing=True):
+    '''Calculate mmi loss with smoothing'''
 
-def cal_loss(pred, gold, smoothing):
+    gold = gold.contiguous().view(-1)
+
+    one_hot = torch.zeros_like(pred_session).scatter(1, gold.view(-1, 1), 1)
+
+    if smoothing:
+        eps = 0.1
+        n_class = pred_session.size(1)
+        one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_class - 1)
+
+    ses_output_sftmx = F.log_softmax(pred_session, dim=1)
+    no_ses_outout_sftmx = F.log_softmax(pred_no_session, dim=1)
+    final_sftmax = ses_output_sftmx - no_ses_outout_sftmx
+
+    non_pad_mask = gold.ne(Constants.PAD)
+    loss = -(one_hot * final_sftmax).sum(dim=1)
+    loss = loss.masked_select(non_pad_mask).sum()
+
+    return loss
+
+def cal_mle_loss(pred, gold, smoothing):
     ''' Calculate cross entropy loss, apply label smoothing if needed. '''
 
     gold = gold.contiguous().view(-1)
@@ -53,7 +81,7 @@ def cal_loss(pred, gold, smoothing):
     return loss
 
 
-def train_epoch(model, training_data, optimizer, device, smoothing):
+def train_epoch(model, training_data, optimizer, device, smoothing, mmi):
     ''' Epoch operation in training phase'''
 
     model.train()
@@ -86,6 +114,10 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
 
             # Shapes:
             #   src_seq[:, i, :].squeeze(1): [batch_size, max_post_len]
+            #   if mmi:
+            #       pred: [2 * (max_post_len - 1), tgt_vocab_size] # first half: session, session half: no session.
+            #   else:
+            #       pred: [max_post_len - 1, tgt_vocab_size]
             pred = model(
                 src_seq[:, i, :].squeeze(1), src_pos[:, i, :].squeeze(1),
                 tgt_seq[:, i, :].squeeze(1), tgt_pos[:, i, :].squeeze(1))
@@ -101,7 +133,7 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
             #   preds[i]:                   [batch_size * max_post_len, vocab_size]
             #   gold[:, i, :].squeeze(1):   [batch_size, max_post_len] 
             # Gold gets flattened during loss calculation.
-            loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=smoothing)
+            loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=smoothing, mmi=mmi)
             # use total loss
             loss += loss_
             # track total number of correct words
@@ -120,7 +152,7 @@ def train_epoch(model, training_data, optimizer, device, smoothing):
     accuracy = n_word_correct/n_word_total
     return loss_per_word, accuracy
 
-def eval_epoch(model, validation_data, device):
+def eval_epoch(model, validation_data, device, mmi):
     ''' Epoch operation in evaluation phase 
     Notes:
         1) See train loop for shape information
@@ -155,7 +187,7 @@ def eval_epoch(model, validation_data, device):
             loss = 0
             n_correct = 0
             for i in range(n_steps):
-                loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=False)
+                loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=False, mmi=mmi)
                 loss += loss_
                 n_correct += n_correct_
 
@@ -191,14 +223,14 @@ def train(model, training_data, validation_data, optimizer, device, opt):
 
         start = time.time()
         train_loss, train_accu = train_epoch(
-            model, training_data, optimizer, device, smoothing=opt.label_smoothing)
+            model, training_data, optimizer, device, smoothing=opt.label_smoothing, mmi=opt.loss_mmi)
         print('  - (Training)   ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
               'loss/word: {loss:8.5f}, elapse: {elapse:3.3f} min'.format(
                   ppl=math.exp(min(train_loss, 100)), accu=100*train_accu,
                   loss=train_loss, elapse=(time.time()-start)/60))
 
         start = time.time()
-        valid_loss, valid_accu = eval_epoch(model, validation_data, device)
+        valid_loss, valid_accu = eval_epoch(model, validation_data, device, mmi=opt.loss_mmi)
         print('  - (Validation) ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
                 'loss/word: {loss:8.5f}, elapse: {elapse:3.3f} min'.format(
                     ppl=math.exp(min(valid_loss, 100)), accu=100*valid_accu,
@@ -237,25 +269,25 @@ def main():
 
     parser.add_argument('-data', required=True)
 
-    parser.add_argument('-epoch', type=int, default=10)
+    parser.add_argument('-epoch', type=int, default=100)
     parser.add_argument('-batch_size', type=int, default=4)
-    parser.add_argument('-lr', type=float, default=1e-3)
+    parser.add_argument('-lr', type=float, default=5e-2)
 
     parser.add_argument('-src_emb_file', type=str, default='')
     parser.add_argument('-tgt_emb_file', type=str, default='')
 
     parser.add_argument('-d_word_vec', type=int, default=300)
-    # parser.add_argument('-d_hidden', type=int, default=512)
-    parser.add_argument('-d_model', type=int, default=512)
+    parser.add_argument('-d_hidden', type=int, default=512)
+    # parser.add_argument('-d_model', type=int, default=300)
     parser.add_argument('-d_inner_hid', type=int, default=512)
     parser.add_argument('-d_k', type=int, default=64)
     parser.add_argument('-d_v', type=int, default=64)
 
     parser.add_argument('-n_head', type=int, default=8)
-    parser.add_argument('-n_layers', type=int, default=3)
-    parser.add_argument('-n_warmup_steps', type=int, default=1000)
+    parser.add_argument('-n_layers', type=int, default=5)
+    parser.add_argument('-n_warmup_steps', type=int, default=2000)
 
-    parser.add_argument('-dropout', type=float, default=0.2)
+    parser.add_argument('-dropout', type=float, default=0.1)
     parser.add_argument('-embs_share_weight', action='store_true')
     parser.add_argument('-proj_share_weight', action='store_true')
 
@@ -265,12 +297,13 @@ def main():
 
     parser.add_argument('-no_cuda', action='store_true')
     parser.add_argument('-label_smoothing', action='store_true')
+    parser.add_argument('-loss_mmi', action='store_true')
 
     opt = parser.parse_args()
     opt.cuda = not opt.no_cuda
 
-    # opt.d_word_vec = opt.d_model # for residual compatibility
-    opt.d_hidden = opt.d_model # for dot product attention
+    opt.d_model = opt.d_word_vec # for residual compatibility
+    # opt.d_hidden = opt.d_model # for dot product attention
 
     #========= Loading Dataset =========#
     data = torch.load(opt.data)
@@ -306,6 +339,7 @@ def main():
         n_layers=opt.n_layers,
         n_head=opt.n_head,
         dropout=opt.dropout,
+        train_for_mmi_loss=opt.loss_mmi,
         src_emb_file=opt.src_emb_file,
         tgt_emb_file=opt.tgt_emb_file).to(device)
 
@@ -320,7 +354,7 @@ def main():
         lr=opt.lr
     )
 
-    train(transformer, training_data, validation_data, optimizer, device ,opt)
+    train(transformer, training_data, validation_data, optimizer, device, opt)
 
 
 def prepare_dataloaders(data, opt):
