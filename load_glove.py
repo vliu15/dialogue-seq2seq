@@ -49,6 +49,4 @@ def create_glove_emb_table(word2idx, split_name, glove_path='data/glove/glove.6B
 
     print('[Info] Final {} vocabulary size: {}'.format(split_name, len(word2idx)))
 
-    np.save('data/glove/{}_emb_file.npy'.format(split_name), emb_table)
-
-    return word2idx
+    return word2idx, emb_table
