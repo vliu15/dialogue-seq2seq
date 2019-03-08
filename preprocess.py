@@ -189,8 +189,8 @@ def main():
     parser.add_argument('-valid_file', required=True)
     parser.add_argument('-test_file', required=True)
     parser.add_argument('-save_dir', required=True)
-    parser.add_argument('-max_post_len', type=int, default=100)
-    parser.add_argument('-max_disc_len', type=int, default=100)
+    parser.add_argument('-max_post_len', type=int, default=50)
+    parser.add_argument('-max_disc_len', type=int, default=50)
     parser.add_argument('-min_word_count', type=int, default=1)     # set to 1.0 to include all unique tokens
     parser.add_argument('-unk_prop_max', type=float, default=0.075)  # set to 1.0 to disregard <unk> proportions
     parser.add_argument('-keep_case', action='store_true')
