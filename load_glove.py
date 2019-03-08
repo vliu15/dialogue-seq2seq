@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 from transformer import Constants
 
-def load_glove(glove_path, word2idx={}):
+def load_glove(glove_path, vocab=set([])):
     ''' Loads GloVe embeddings '''
 
     word2emb = {}
@@ -13,9 +13,8 @@ def load_glove(glove_path, word2idx={}):
         for line in tqdm(f):
             split_line = line.split()
             word = split_line[0]
-            if word in word2idx.keys():
-                embedding = np.array([float(val) for val in split_line[1:]])
-                word2emb[word] = embedding
+            if word in vocab:
+                word2emb[word] = np.array([float(val) for val in split_line[1:]])
 
     return word2emb
 
@@ -30,10 +29,15 @@ def create_glove_emb_table(word2idx, split_name, glove_path='data/glove/glove.6B
 
     #- Load GloVe model
     print("[Info] Load GloVe model.")
-    word2emb = load_glove(glove_path, word2idx)
+    word2emb = load_glove(glove_path, set(word2idx.keys()))
 
-    #- Create embedding table, randomly initialize special tokens
-    word2idx = {}
+    #- Create embedding table and new vocab, randomly initialize special tokens
+    word2idx = {
+        Constants.BOS_WORD: Constants.BOS,
+        Constants.EOS_WORD: Constants.EOS,
+        Constants.PAD_WORD: Constants.PAD,
+        Constants.UNK_WORD: Constants.UNK}
+
     emb_table = np.zeros(shape=(len(word2emb) + 4, glove_size))
     emb_table[Constants.PAD] = np.random.randn(glove_size)
     emb_table[Constants.UNK] = np.random.randn(glove_size)
