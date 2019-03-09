@@ -12,6 +12,8 @@ def load_data():
     total_disc_len = 0
     num_posts = 0
     num_discs = 0
+    seen = set([])
+    dup = 0
     for discussion in dataset.get_discussions():
         thread = {}
         posts = []
@@ -19,6 +21,11 @@ def load_data():
         for post in discussion.get_posts():
             text = post.delete_ranges('quotes')
             text = text.encode('ascii', 'ignore').replace('\n', '')
+            if text in seen:
+                dup += 1
+                continue
+            else:
+                seen.add(text)
             text = word_tokenize(text)
             posts.append(text)
 
@@ -34,6 +41,7 @@ def load_data():
             total_disc_len += len(posts)
             num_discs += 1
 
+    print('[Info] Number of duplicate posts: {}'.format(dup))
     print('[Info] Average post length: {}'.format(total_post_len / float(num_posts)))
     print('[Info] Average discussion length: {}'.format(total_disc_len / float(num_discs)))
 
