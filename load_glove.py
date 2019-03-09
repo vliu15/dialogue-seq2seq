@@ -50,3 +50,29 @@ def create_glove_emb_table(word2idx, split_name, glove_path='data/glove/glove.6B
     print('[Info] Final {} vocabulary size: {}'.format(split_name, len(word2idx)))
 
     return word2idx, emb_table
+
+def main(args):
+    if args.vocab:
+        data = torch.load('data/iac/train.data.pt')
+        src_word2idx = data['dict']['src']
+        src_word2idx, src_emb_table = create_glove_emb_table(src_word2idx, 'src')
+        data['dict']['src'] = src_word2idx
+        np.save(src_emb_table)
+
+        tgt_word2idx = data['dict']['tgt']
+        tgt_word2idx, tgt_emb_table = create_glove_emb_table(tgt_word2idx, 'tgt')
+        data['dict']['tgt'] = tgt_word2idx
+        np.save(tgt_emb_table)
+
+        torch.save(data)
+    else:
+        word2idx = {}
+        word2idx, emb_table = create_glove_emb_table(src_word2idx, '')
+        np.save(emb_table)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-vocab', action='store_true')
+    args = parser.parse_args()
+
+    main(args) 
