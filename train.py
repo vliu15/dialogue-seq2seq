@@ -273,7 +273,7 @@ def main():
     parser.add_argument('-data', required=True)
 
     parser.add_argument('-epoch', type=int, default=100)
-    parser.add_argument('-batch_size', type=int, default=4)
+    parser.add_argument('-batch_size', type=int, default=2)
     parser.add_argument('-lr', type=float, default=5e-2)
 
     parser.add_argument('-src_emb_file', type=str, default='')

@@ -8,17 +8,43 @@ import pickle
 def load_data():
     data = []
     dataset = Dataset(name='fourforums')
+    total_post_len = 0
+    total_disc_len = 0
+    num_posts = 0
+    num_discs = 0
+    seen = set([])
+    dup = 0
     for discussion in dataset.get_discussions():
         thread = {}
         posts = []
         # discussion.posts is a dict of posts
         for post in discussion.get_posts():
-            text_without_quotes = post.delete_ranges('quotes')
-            ascii_text = text_without_quotes.encode('ascii', 'ignore').replace('\n', '') 
-            posts.append(word_tokenize(ascii_text))
+            text = post.delete_ranges('quotes')
+            text = text.encode('ascii', 'ignore').replace('\n', '')
+            if text in seen:
+                dup += 1
+                continue
+            else:
+                seen.add(text)
+            text = word_tokenize(text)
+            posts.append(text)
+
+            if len(text) > 0:
+                total_post_len += len(text)
+                num_posts += 1
+
         thread["src"] = posts[:-1]
         thread["tgt"] = posts[1:]
         data.append(thread)
+
+        if len(posts) > 0:
+            total_disc_len += len(posts)
+            num_discs += 1
+
+    print('[Info] Number of duplicate posts: {}'.format(dup))
+    print('[Info] Average post length: {}'.format(total_post_len / float(num_posts)))
+    print('[Info] Average discussion length: {}'.format(total_disc_len / float(num_discs)))
+
     return data
 
 def main():
