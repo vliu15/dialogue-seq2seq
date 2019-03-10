@@ -127,8 +127,8 @@ class Session(nn.Module):
         except:
             self.h = torch.Tensor(self.batch_size, self.d_hidden)
             self.c = torch.Tensor(self.batch_size, self.d_hidden)
-        nn.init.xavier_normal_(self.h)
-        nn.init.xavier_normal_(self.c)
+        nn.init.zeros_(self.h)
+        nn.init.zeros_(self.c)
 
     def forward(self, enc_output):
         features, _ = torch.max(enc_output, dim=1)
