@@ -117,18 +117,16 @@ class Session(nn.Module):
         self.d_hidden = d_hidden
 
         self.memory = nn.LSTMCell(d_model, d_hidden)
-        self.init_hidden()
+        self.zero_lstm_state()
         self.attn = AttentionLayer(d_hidden, d_model, dropout)
 
-    def init_hidden(self):
+    def zero_lstm_state(self):
         try:
-            self.h = torch.Tensor(self.batch_size, self.d_hidden).cuda()
-            self.c = torch.Tensor(self.batch_size, self.d_hidden).cuda()
+            self.h = torch.zeros(self.batch_size, self.d_hidden).cuda()
+            self.c = torch.zeros(self.batch_size, self.d_hidden).cuda()
         except:
-            self.h = torch.Tensor(self.batch_size, self.d_hidden)
-            self.c = torch.Tensor(self.batch_size, self.d_hidden)
-        nn.init.zeros_(self.h)
-        nn.init.zeros_(self.c)
+            self.h = torch.zeros(self.batch_size, self.d_hidden)
+            self.c = torch.zeros(self.batch_size, self.d_hidden)
 
     def forward(self, enc_output):
         features, _ = torch.max(enc_output, dim=1)
