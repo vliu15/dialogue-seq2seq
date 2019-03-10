@@ -109,7 +109,7 @@ def train_epoch(model, training_data, optimizer, device, smoothing, mmi):
 
         # forward
         optimizer.zero_grad()
-        model.session.init_hidden()
+        model.session.zero_lstm_state()
         preds = []
         # iterate through time steps
         for i in tqdm(range(n_steps),
@@ -177,6 +177,8 @@ def eval_epoch(model, validation_data, device, mmi):
             n_steps = src_pos.size(1)
             gold = tgt_seq[:, :, 1:]
 
+            model.session.zero_lstm_state()
+            
             # forward
             preds = []
             for i in tqdm(range(n_steps),
