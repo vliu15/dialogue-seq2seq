@@ -111,22 +111,19 @@ class Encoder(nn.Module):
         return enc_output,
 
 class Session(nn.Module):
-    def __init__(self, d_model, d_hidden, batch_size, dropout=0.1):
+    def __init__(self, d_model, d_hidden, dropout=0.1):
         super().__init__()
-        self.batch_size = batch_size
         self.d_hidden = d_hidden
-
         self.memory = nn.LSTMCell(d_model, d_hidden)
-        self.zero_lstm_state()
         self.attn = AttentionLayer(d_hidden, d_model, dropout)
 
-    def zero_lstm_state(self):
+    def zero_lstm_state(self, batch_size):
         try:
-            self.h = torch.zeros(self.batch_size, self.d_hidden).cuda()
-            self.c = torch.zeros(self.batch_size, self.d_hidden).cuda()
+            self.h = torch.zeros(batch_size, self.d_hidden).cuda()
+            self.c = torch.zeros(batch_size, self.d_hidden).cuda()
         except:
-            self.h = torch.zeros(self.batch_size, self.d_hidden)
-            self.c = torch.zeros(self.batch_size, self.d_hidden)
+            self.h = torch.zeros(batch_size, self.d_hidden)
+            self.c = torch.zeros(batch_size, self.d_hidden)
 
     def forward(self, enc_output):
         features, _ = torch.max(enc_output, dim=1)
@@ -201,7 +198,7 @@ class Transformer(nn.Module):
 
     def __init__(
             self,
-            n_src_vocab, n_tgt_vocab, len_max_seq, batch_size,
+            n_src_vocab, n_tgt_vocab, len_max_seq,
             d_word_vec=512, d_model=512, d_inner=2048, d_hidden=512,
             n_layers=6, n_head=8, d_k=64, d_v=64, dropout=0.1,
             tgt_emb_prj_weight_sharing=True,
@@ -217,7 +214,7 @@ class Transformer(nn.Module):
             n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
             dropout=dropout, emb_file=src_emb_file)
 
-        self.session = Session(d_model, d_hidden, batch_size, dropout)
+        self.session = Session(d_model, d_hidden, dropout)
 
         self.decoder = Decoder(
             n_tgt_vocab=n_tgt_vocab, len_max_seq=len_max_seq,

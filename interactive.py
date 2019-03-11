@@ -67,7 +67,9 @@ class Interactive(Translator):
             def predict_word(dec_seq, dec_pos, src_seq, enc_output, n_active_inst, n_bm):
                 dec_output, *_ = self.model.decoder(dec_seq, dec_pos, src_seq, enc_output)
                 dec_output = dec_output[:, -1, :]  # Pick the last step: (bh * bm) * d_h
-                word_prob = F.log_softmax(self.model.tgt_word_prj(dec_output), dim=1)
+                word_prob = self.model.tgt_word_prj(dec_output)
+                word_prob[:, Constants.UNK] = -float('inf')
+                word_prob = F.log_softmax(word_prob, dim=1)
                 word_prob = word_prob.view(n_active_inst, n_bm, -1)
 
                 return word_prob
@@ -104,6 +106,9 @@ class Interactive(Translator):
             return all_hyp, all_scores
 
         with torch.no_grad():
+            #- Zero out hidden state to batch size 1
+            self.model.session.zero_lstm_state(1)
+
             #-- Encode
             src_enc, *_ = self.model.encoder(src_seq, src_pos)
             src_enc, *_ = self.model.session(src_enc)
@@ -140,15 +145,15 @@ class Interactive(Translator):
     
 
 def interactive(opt):
-    def prepare_seq(seq, max_seq_len, word2idx, device, model_batch_size):
+    def prepare_seq(seq, max_seq_len, word2idx, device):
         seq = word_tokenize(seq[:max_seq_len])
         seq = [word2idx.get(w.lower(), Constants.UNK) for w in seq]
         seq = [Constants.BOS] + seq + [Constants.EOS]
         seq = np.array(seq + [Constants.PAD] * (max_seq_len - len(seq)))
         pos = np.array([pos_i+1 if w_i != Constants.PAD else 0 for pos_i, w_i in enumerate(seq)])
 
-        seq = torch.LongTensor(seq).unsqueeze(0).repeat(model_batch_size, 1)
-        pos = torch.LongTensor(pos).unsqueeze(0).repeat(model_batch_size, 1)
+        seq = torch.LongTensor(seq).unsqueeze(0)
+        pos = torch.LongTensor(pos).unsqueeze(0)
         return seq.to(device), pos.to(device)
 
     #- Load preprocessing file for vocabulary
@@ -160,7 +165,6 @@ def interactive(opt):
     #- Prepare interactive shell
     seq2seq = Interactive(opt)
     max_seq_len = seq2seq.model_opt.max_post_len
-    model_batch_size = seq2seq.model_opt.batch_size
     print('[Info] Model opts: {}'.format(seq2seq.model_opt))
 
     #- Interact with console
@@ -168,7 +172,7 @@ def interactive(opt):
     console_output = '[Seq2Seq](score:--.--) human, what do you have to say?\n[Human] '
     while console_input != 'exit':
         console_input = input(console_output) # get user input
-        seq, pos = prepare_seq(console_input, max_seq_len, src_word2idx, seq2seq.device, model_batch_size)
+        seq, pos = prepare_seq(console_input, max_seq_len, src_word2idx, seq2seq.device)
         console_output, score = seq2seq.translate_batch(seq, pos)
         console_output = console_output[0][0]
         score = score[0][0]
@@ -188,7 +192,6 @@ if __name__ == "__main__":
 
     opt = parser.parse_args()
     opt.cuda = not opt.no_cuda
-    opt.batch_size = 1
     opt.n_best = 1
 
     interactive(opt)

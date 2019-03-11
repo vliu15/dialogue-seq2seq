@@ -26,7 +26,6 @@ class Translator(object):
             model_opt.src_vocab_size,
             model_opt.tgt_vocab_size,
             model_opt.max_post_len,
-            model_opt.batch_size,
             tgt_emb_prj_weight_sharing=model_opt.proj_share_weight,
             emb_src_tgt_weight_sharing=model_opt.embs_share_weight,
             d_k=model_opt.d_k,
@@ -38,7 +37,7 @@ class Translator(object):
             n_layers=model_opt.n_layers,
             n_head=model_opt.n_head,
             dropout=model_opt.dropout,
-            train_for_mmi_loss=False,
+            train_for_mmi_loss=model_opt.train_for_mmi_loss,
             src_emb_file=model_opt.src_emb_file,
             tgt_emb_file=model_opt.tgt_emb_file)
 
@@ -52,9 +51,6 @@ class Translator(object):
 
         self.model = model
         self.model.eval()
-
-    def reload_weights(self):
-        self.model.load_state_dict(self.state_dict)
 
     def translate_batch(self, src_seq, src_pos):
         ''' Translation work in one batch '''
@@ -156,12 +152,10 @@ class Translator(object):
             return restructured
 
         with torch.no_grad():
-            #-- Reset weights (to reset LSTM Cell weights)
-            self.reload_weights()
-            
             #-- Prepare to step through sequences
             src_seq, src_pos = src_seq.to(self.device), src_pos.to(self.device)
-            n_steps = src_seq.size(1)
+            batch_size, n_steps, _ = src_seq.size()
+            self.model.session.zero_lstm_state(batch_size)
 
             batch_hyp, batch_scores = [], []
 

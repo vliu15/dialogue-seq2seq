@@ -102,14 +102,14 @@ def train_epoch(model, training_data, optimizer, device, smoothing, mmi):
         #   2) *_pos contains the index numbers for every position. 
         src_seq, src_pos, tgt_seq, tgt_pos = map(lambda x: x.to(device), batch)
 
-        n_steps = src_seq.size(1) # n_steps is for every post in discussion (max_dis_len)
+        batch_size, n_steps, _ = src_seq.size() # n_steps is for every post in discussion (max_dis_len)
 
         # Clip the target_seq for the BOS token
         gold = tgt_seq[:, :, 1:]
 
         # forward
         optimizer.zero_grad()
-        model.session.zero_lstm_state()
+        model.session.zero_lstm_state(batch_size)
         preds = []
         # iterate through time steps
         for i in tqdm(range(n_steps),
@@ -174,10 +174,10 @@ def eval_epoch(model, validation_data, device, mmi):
 
             # prepare data
             src_seq, src_pos, tgt_seq, tgt_pos = map(lambda x: x.to(device), batch)
-            n_steps = src_pos.size(1)
+            batch_size, n_steps, _ = src_pos.size()
             gold = tgt_seq[:, :, 1:]
 
-            model.session.zero_lstm_state()
+            model.session.zero_lstm_state(batch_size)
             
             # forward
             preds = []
@@ -332,7 +332,6 @@ def main():
         opt.src_vocab_size,
         opt.tgt_vocab_size,
         opt.max_post_len,
-        opt.batch_size,
         tgt_emb_prj_weight_sharing=opt.proj_share_weight,
         emb_src_tgt_weight_sharing=opt.embs_share_weight,
         d_k=opt.d_k,
@@ -373,7 +372,7 @@ def prepare_dataloaders(data, opt):
         num_workers=2,
         batch_size=opt.batch_size,
         collate_fn=paired_collate_fn,
-        drop_last=True,
+        drop_last=False,
         shuffle=True)
 
     valid_loader = torch.utils.data.DataLoader(
@@ -385,7 +384,7 @@ def prepare_dataloaders(data, opt):
         num_workers=2,
         batch_size=opt.batch_size,
         collate_fn=paired_collate_fn,
-        drop_last=True)
+        drop_last=False)
     return train_loader, valid_loader
 
 
