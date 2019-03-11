@@ -11,6 +11,7 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data
+import torch.nn as nn
 import numpy as np
 import transformer.Constants as Constants
 from dataset import TranslationDataset, paired_collate_fn
@@ -351,6 +352,9 @@ def main():
     model_parameters = filter(lambda p: p.requires_grad, transformer.parameters())
     n_params = sum([np.prod(p.size()) for p in model_parameters])
     print('Total number of parameters: {n:3.3}M'.format(n=n_params/1000000.0))
+    for p in transformer.parameters():
+        if p.dim() > 1:
+            nn.init.xavier_uniform_(p)
 
     optimizer = ScheduledOptim(
         optim.Adam(filter(lambda p: p.requires_grad, transformer.parameters()), betas=(0.9, 0.98), eps=1e-09),
