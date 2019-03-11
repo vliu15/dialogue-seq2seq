@@ -352,7 +352,8 @@ def main():
     model_parameters = filter(lambda p: p.requires_grad, transformer.parameters())
     n_params = sum([np.prod(p.size()) for p in model_parameters])
     print('Total number of parameters: {n:3.3}M'.format(n=n_params/1000000.0))
-    for p in transformer.parameters():
+    
+    for p in filter(lambda p: p.requires_grad, transformer.parameters()):
         if p.dim() > 1:
             nn.init.xavier_uniform_(p)
 
