@@ -5,8 +5,6 @@ import numpy as np
 import transformer.Constants as Constants
 from transformer.Layers import EncoderLayer, DecoderLayer, AttentionLayer
 
-__author__ = "Yu-Hsiang Huang"
-
 def get_non_pad_mask(seq):
     assert seq.dim() == 2
     return seq.ne(Constants.PAD).type(torch.float).unsqueeze(-1)
