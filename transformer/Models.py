@@ -126,7 +126,7 @@ class Session(nn.Module):
             self.h = torch.zeros(self.batch_size, self.d_hidden)
             self.c = torch.zeros(self.batch_size, self.d_hidden)
 
-    def forward(self, enc_output, src_seq):
+    def forward(self, enc_output, src_seq, return_attns=False):
         # -- Prepare mask
         non_pad_mask = get_non_pad_mask(src_seq)
         enc_output *= non_pad_mask
@@ -138,7 +138,9 @@ class Session(nn.Module):
         self.h, self.c = self.memory(features, (self.h, self.c))
         ses_output, ses_attn_distr = self.attn(enc_output, self.h)
 
-        return ses_output, ses_attn_distr
+        if return_attns:
+            return ses_output, ses_attn_distr
+        return ses_output,
 
 
 class Decoder(nn.Module):
