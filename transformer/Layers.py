@@ -4,9 +4,6 @@ import torch.nn as nn
 from transformer.SubLayers import MultiHeadAttention, PositionwiseFeedForward, \
     MultiplicativeAttention, DotProductAttention
 
-__author__ = "Yu-Hsiang Huang"
-
-
 class EncoderLayer(nn.Module):
     ''' Compose with two layers '''
 
