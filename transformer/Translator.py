@@ -155,7 +155,7 @@ class Translator(object):
             #-- Prepare to step through sequences
             src_seq, src_pos = src_seq.to(self.device), src_pos.to(self.device)
             batch_size, n_steps, _ = src_seq.size()
-            self.model.session.zero_lstm_state(batch_size)
+            self.model.session.zero_lstm_state(batch_size, self.device)
 
             batch_hyp, batch_scores = [], []
 

@@ -107,7 +107,7 @@ class Interactive(Translator):
 
         with torch.no_grad():
             #- Zero out hidden state to batch size 1
-            self.model.session.zero_lstm_state(1)
+            self.model.session.zero_lstm_state(1, self.device)
 
             #-- Encode
             src_enc, *_ = self.model.encoder(src_seq, src_pos)
