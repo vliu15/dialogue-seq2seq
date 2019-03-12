@@ -37,7 +37,7 @@ class Translator(object):
             n_layers=model_opt.n_layers,
             n_head=model_opt.n_head,
             dropout=model_opt.dropout,
-            train_for_mmi_loss=model_opt.train_for_mmi_loss,
+            train_for_mmi_loss=model_opt.loss_mmi,
             src_emb_file=model_opt.src_emb_file,
             tgt_emb_file=model_opt.tgt_emb_file)
 
