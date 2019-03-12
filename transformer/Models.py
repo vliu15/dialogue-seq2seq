@@ -5,8 +5,6 @@ import numpy as np
 import transformer.Constants as Constants
 from transformer.Layers import EncoderLayer, DecoderLayer, AttentionLayer
 
-__author__ = "Yu-Hsiang Huang"
-
 def get_non_pad_mask(seq):
     assert seq.dim() == 2
     return seq.ne(Constants.PAD).type(torch.float).unsqueeze(-1)
@@ -128,12 +126,21 @@ class Session(nn.Module):
             self.h = torch.zeros(self.batch_size, self.d_hidden)
             self.c = torch.zeros(self.batch_size, self.d_hidden)
 
-    def forward(self, enc_output):
+    def forward(self, enc_output, src_seq, return_attns=False):
+        # -- Prepare mask
+        non_pad_mask = get_non_pad_mask(src_seq)
+        enc_output *= non_pad_mask
+
+        # -- Extract features
         features, _ = torch.max(enc_output, dim=1)
+
+        # -- Compute attention with global context vector
         self.h, self.c = self.memory(features, (self.h, self.c))
         ses_output, ses_attn_distr = self.attn(enc_output, self.h)
 
-        return ses_output, ses_attn_distr
+        if return_attns:
+            return ses_output, ses_attn_distr
+        return ses_output,
 
 
 class Decoder(nn.Module):
@@ -254,7 +261,7 @@ class Transformer(nn.Module):
         tgt_seq, tgt_pos = tgt_seq[:, :-1], tgt_pos[:, :-1]
 
         enc_output, *_ = self.encoder(src_seq, src_pos)
-        ses_output, *_ = self.session(enc_output)
+        ses_output, *_ = self.session(enc_output, src_seq)
         # Output size:
         #   1) enc_output, ses_output: [batch_size, max_post_len, d_hidden]
         dec_output = None
