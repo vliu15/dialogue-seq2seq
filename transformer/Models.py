@@ -115,7 +115,7 @@ class Session(nn.Module):
         self.memory = nn.LSTMCell(d_model, d_hidden)
         self.attn = AttentionLayer(d_hidden, d_model, dropout)
 
-    def zero_lstm_state(self, batch_size, devicve):
+    def zero_lstm_state(self, batch_size, device):
         self.h = torch.zeros(batch_size, self.d_hidden).to(device)
         self.c = torch.zeros(batch_size, self.d_hidden).to(device)
 
