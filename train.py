@@ -242,7 +242,8 @@ def train(model, training_data, validation_data, optimizer, device, opt, epoch):
         checkpoint = {
             'model': model_state_dict,
             'settings': opt,
-            'epoch': epoch_i}
+            'epoch': epoch_i,
+            'optimizer': optimizer}
 
         if opt.save_model:
             if opt.save_mode == 'all':
@@ -344,22 +345,6 @@ def main():
         src_emb_file=opt.src_emb_file,
         tgt_emb_file=opt.tgt_emb_file).to(device)
 
-    if opt.load_model is not None:
-        checkpoint = torch.load(opt.load_model)
-        model_opt = checkpoint['settings']
-        epoch = checkpoint['epoch']
-        try:
-            transformer.load_state_dict(checkpoint['model'])
-            print('[Info] Trained model state loaded.')
-            print('[Info] Start training from epoch {}'.format(epoch))
-        except:
-            print('[Info] Model state loading failed. Checkpoint settings: {}'.format(model_opt))
-            raise RuntimeError
-    else:
-        epoch = 0
-        print('[Info] Initialized new model.')
-
-
     model_parameters = filter(lambda p: p.requires_grad, transformer.parameters())
     n_params = sum([np.prod(p.size()) for p in model_parameters])
     print('Total number of parameters: {n:3.3}M'.format(n=n_params/1000000.0))
@@ -370,6 +355,22 @@ def main():
         opt.n_warmup_steps, 
         lr=opt.lr
     )
+
+    if opt.load_model is not None:
+        checkpoint = torch.load(opt.load_model)
+        model_opt = checkpoint['settings']
+        epoch = checkpoint['epoch']
+        optimizer = checkpoint['step_no']
+        try:
+            transformer.load_state_dict(checkpoint['model'])
+            print('[Info] Trained model state loaded.')
+            print('[Info] Start training from epoch {}, step {}.'.format(epoch, optimizer.step_no))
+        except:
+            print('[Info] Model state loading failed. Checkpoint settings: {}'.format(model_opt))
+            raise RuntimeError
+    else:
+        epoch = 0
+        print('[Info] Initialized new model.')
 
     train(transformer, training_data, validation_data, optimizer, device, opt, epoch)
 
