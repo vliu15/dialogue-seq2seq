@@ -112,9 +112,7 @@ def train_epoch(model, training_data, optimizer, device, smoothing, mmi):
         model.session.zero_lstm_state()
         preds = []
         # iterate through time steps
-        for i in tqdm(range(n_steps),
-            desc='  - (Training / Time-Steps)   ', leave=False):
-
+        for i in range(n_steps):
             # Shapes:
             #   src_seq[:, i, :].squeeze(1): [batch_size, max_post_len]
             #   if mmi:
@@ -129,9 +127,7 @@ def train_epoch(model, training_data, optimizer, device, smoothing, mmi):
         # backward
         loss = 0
         n_correct = 0
-        for i in tqdm(range(n_steps),
-            desc='  - (Training / Eval Loss)   ', leave=False):
-
+        for i in range(n_steps):
             # Shapes: 
             #   preds[i]:                   [batch_size * max_post_len, vocab_size]
             #   gold[:, i, :].squeeze(1):   [batch_size, max_post_len] 
@@ -181,8 +177,7 @@ def eval_epoch(model, validation_data, device, mmi):
             
             # forward
             preds = []
-            for i in tqdm(range(n_steps),
-                desc='  - (Validation / Time-Steps)   ', leave=False):
+            for i in range(n_steps):
                 pred = model(
                     src_seq[:, i, :].squeeze(1), src_pos[:, i, :].squeeze(1),
                     tgt_seq[:, i, :].squeeze(1), tgt_pos[:, i, :].squeeze(1))
@@ -205,7 +200,7 @@ def eval_epoch(model, validation_data, device, mmi):
     accuracy = n_word_correct/n_word_total
     return loss_per_word, accuracy
 
-def train(model, training_data, validation_data, optimizer, device, opt):
+def train(model, training_data, validation_data, optimizer, device, opt, epoch):
     ''' Start training '''
 
     log_train_file = None
@@ -223,7 +218,7 @@ def train(model, training_data, validation_data, optimizer, device, opt):
             log_vf.write('epoch,loss,ppl,accuracy\n')
 
     valid_accus = []
-    for epoch_i in range(opt.epoch):
+    for epoch_i in range(epoch, opt.epoch):
         print('[ Epoch', epoch_i, ']')
 
         start = time.time()
@@ -275,8 +270,8 @@ def main():
     parser.add_argument('-data', required=True)
 
     parser.add_argument('-epoch', type=int, default=100)
-    parser.add_argument('-batch_size', type=int, default=2)
-    parser.add_argument('-lr', type=float, default=5e-2)
+    parser.add_argument('-batch_size', type=int, default=8)
+    parser.add_argument('-lr', type=float, default=1e-3)
 
     parser.add_argument('-src_emb_file', type=str, default='')
     parser.add_argument('-tgt_emb_file', type=str, default='')
@@ -289,8 +284,8 @@ def main():
     parser.add_argument('-d_v', type=int, default=64)
 
     parser.add_argument('-n_head', type=int, default=8)
-    parser.add_argument('-n_layers', type=int, default=5)
-    parser.add_argument('-n_warmup_steps', type=int, default=4000)
+    parser.add_argument('-n_layers', type=int, default=3)
+    parser.add_argument('-n_warmup_steps', type=int, default=1000)
 
     parser.add_argument('-dropout', type=float, default=0.1)
     parser.add_argument('-embs_share_weight', action='store_true')
@@ -352,12 +347,16 @@ def main():
     if opt.load_model is not None:
         checkpoint = torch.load(opt.load_model)
         model_opt = checkpoint['settings']
+        epoch = checkpoint['epoch']
         try:
             transformer.load_state_dict(checkpoint['model'])
             print('[Info] Trained model state loaded.')
+            print('[Info] Start training from epoch {}'.format(epoch))
         except:
             print('[Info] Model state loading failed. Checkpoint settings: {}'.format(model_opt))
+            raise RuntimeError
     else:
+        epoch = 0
         print('[Info] Initialized new model.')
 
 
@@ -372,7 +371,7 @@ def main():
         lr=opt.lr
     )
 
-    train(transformer, training_data, validation_data, optimizer, device, opt)
+    train(transformer, training_data, validation_data, optimizer, device, opt, epoch)
 
 
 def prepare_dataloaders(data, opt):
