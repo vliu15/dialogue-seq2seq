@@ -362,7 +362,7 @@ def main():
         epoch = checkpoint['epoch']
         optimizer = checkpoint['step_no']
         try:
-            transformer.load_state_dict(checkpoint['model'])
+            transformer.load_state_dict(checkpoint['model'] + '.chkpt')
             print('[Info] Trained model state loaded.')
             print('[Info] Start training from epoch {}, step {}.'.format(epoch, optimizer.step_no))
         except:
