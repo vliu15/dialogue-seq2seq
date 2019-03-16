@@ -8,6 +8,7 @@ import time
 
 from tqdm import tqdm
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data
@@ -360,11 +361,11 @@ def main():
         checkpoint = torch.load(opt.load_model + '.chkpt')
         model_opt = checkpoint['settings']
         epoch = checkpoint['epoch']
-        optimizer = checkpoint['step_no']
+        optimizer = checkpoint['optimizer']
         try:
             transformer.load_state_dict(checkpoint['model'])
             print('[Info] Trained model state loaded.')
-            print('[Info] Start training from epoch {}, step {}.'.format(epoch, optimizer.step_no))
+            print('[Info] Start training from epoch {}, step {}.'.format(epoch + 1, optimizer.n_current_steps))
         except:
             print('[Info] Model state loading failed. Checkpoint settings: {}'.format(model_opt))
             raise RuntimeError
@@ -372,7 +373,11 @@ def main():
         epoch = 0
         print('[Info] Initialized new model.')
 
-    train(transformer, training_data, validation_data, optimizer, device, opt, epoch)
+    for p in filter(lambda p: p.requires_grad, transformer.parameters()):
+        if p.dim() > 1:
+            nn.init.xavier_uniform_(p)
+
+    train(transformer, training_data, validation_data, optimizer, device, opt, epoch + 1)
 
 
 def prepare_dataloaders(data, opt):
