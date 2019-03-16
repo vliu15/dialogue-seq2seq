@@ -299,6 +299,7 @@ def main():
     parser.add_argument('-log', default=None)
     parser.add_argument('-save_model', default=None)
     parser.add_argument('-save_mode', type=str, choices=['all', 'best'], default='best')
+    parser.add_argument('-load_model', default=None)
 
     parser.add_argument('-no_cuda', action='store_true')
     parser.add_argument('-label_smoothing', action='store_true')
@@ -347,6 +348,18 @@ def main():
         train_for_mmi_loss=opt.loss_mmi,
         src_emb_file=opt.src_emb_file,
         tgt_emb_file=opt.tgt_emb_file).to(device)
+
+    if opt.load_model is not None:
+        checkpoint = torch.load(opt.load_model)
+        model_opt = checkpoint['settings']
+        try:
+            transformer.load_state_dict(checkpoint['model'])
+            print('[Info] Trained model state loaded.')
+        except:
+            print('[Info] Model state loading failed. Checkpoint settings: {}'.format(model_opt))
+    else:
+        print('[Info] Initialized new model.')
+
 
     model_parameters = filter(lambda p: p.requires_grad, transformer.parameters())
     n_params = sum([np.prod(p.size()) for p in model_parameters])
