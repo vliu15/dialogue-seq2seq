@@ -357,12 +357,12 @@ def main():
     )
 
     if opt.load_model is not None:
-        checkpoint = torch.load(opt.load_model)
+        checkpoint = torch.load(opt.load_model + '.chkpt')
         model_opt = checkpoint['settings']
         epoch = checkpoint['epoch']
         optimizer = checkpoint['step_no']
         try:
-            transformer.load_state_dict(checkpoint['model'] + '.chkpt')
+            transformer.load_state_dict(checkpoint['model'])
             print('[Info] Trained model state loaded.')
             print('[Info] Start training from epoch {}, step {}.'.format(epoch, optimizer.step_no))
         except:
