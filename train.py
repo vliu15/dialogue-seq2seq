@@ -8,7 +8,6 @@ import time
 
 from tqdm import tqdm
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data
@@ -372,10 +371,6 @@ def main():
     else:
         epoch = 0
         print('[Info] Initialized new model.')
-
-    for p in filter(lambda p: p.requires_grad, transformer.parameters()):
-        if p.dim() > 1:
-            nn.init.xavier_uniform_(p)
 
     train(transformer, training_data, validation_data, optimizer, device, opt, epoch + 1)
 
