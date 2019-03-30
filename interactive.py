@@ -5,10 +5,10 @@ import torch.nn.functional as F
 import argparse
 import numpy as np
 from nltk import word_tokenize
-from transformer.Models import Transformer
-from transformer.Translator import Translator
-from transformer.Beam import Beam
-from transformer import Constants
+from seq2seq.Models import Transformer
+from seq2seq.Translator import Translator
+from seq2seq.Beam import Beam
+from seq2seq import Constants
 
 
 class Interactive(Translator):
@@ -161,19 +161,19 @@ def interactive(opt):
     del prepro # to save memory
 
     #- Prepare interactive shell
-    seq2seq = Interactive(opt)
-    max_seq_len = seq2seq.model_opt.max_post_len
-    print('[Info] Model opts: {}'.format(seq2seq.model_opt))
+    interactive = Interactive(opt)
+    max_seq_len = interactive.model_opt.max_post_len
+    print('[Info] Model opts: {}'.format(interactive.model_opt))
 
     #- Interact with console
     console_input = ''
-    console_output = '[Seq2Seq](score:--.--) human , what do you have to say ( type \' exit\' to quit ) ?\n[Human] '
+    console_output = '[Seq2Seq](score:--.--) human , what do you have to say ( type \' exit \' to quit ) ?\n[Human] '
     while True:
         console_input = input(console_output) # get user input
         if console_input == 'exit':
             break
-        seq, pos = prepare_seq(console_input, max_seq_len, src_word2idx, seq2seq.device)
-        console_output, score = seq2seq.translate_batch(seq, pos)
+        seq, pos = prepare_seq(console_input, max_seq_len, src_word2idx, interactive.device)
+        console_output, score = interactive.translate_batch(seq, pos)
         console_output = console_output[0][0]
         score = score[0][0]
         console_output = '[Seq2Seq](score:{score:2.2f}) '.format(score=score.item()) + \
