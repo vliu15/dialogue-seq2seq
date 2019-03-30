@@ -14,6 +14,10 @@ We adapt the code for the Transformer encoder and decoder from [this](https://gi
 The Internet Argument Corpus (IAC) is a collection of discussion posts scraped from political debate forums that we use to benchmark our model. The dataset in total has 11.8k discussions, which amount to about 390k individual posts from users. We define each example to be one discussion, a sequence of posts, which are a sequence of tokens.
 > For generality, we refer to the concept of a discussion as a `seq` and a post as a `subseq`.
 
+We believe we compete with the generative system proposed in the "[Dave the Debater](https://aclweb.org/anthology/W18-5215)" paper that won IBM Best Paper Award in 2018. The generative system described in this paper achieves a perplexity of around 70-80 and generates mediocre responses at best. Their interactive web demo can be found [here](http://114.212.80.
+16:8000/debate/).
+
+### Results
 On the IAC dataset, we are able to to achieve ~25% word accuracy rate and a 80 perplexity score on both training and validation sets with an `<UNK>` pruning threshold in preprocessing. Without this threshold, we achieve ~28% word accuracy rate and a 66 perplexity score but at the cost of coherent and interesting output. Below, we provide some details about the default parameters we use.
 
 - Subsequence lengths are set to 50 tokens and sequence lengths are set to 25 subsequences.
@@ -22,6 +26,8 @@ On the IAC dataset, we are able to to achieve ~25% word accuracy rate and a 80 p
 - Fine-tuning GloVe embeddings in training adds a 1-2% boost in performance towards convergence.
 - We find that a few thousand warmup steps to a learning rate around 1e-3 yields best early training.
 - In general, increasing the complexity of the model does little on this task and dataset. We find that 3 Transformer encoder-decoder layers is a reasonable lower-bound.
+- We find that training with the MLE objective instead of the MMI objective with cross entropy loss yields stabler training.
+- For faster convergence, we adopt two phases of pretraining to familiarize the model with language modeling: denoising the autoencoder by training it to predict its input sequence, and pair prediction, where we flatten each subsequence pair is a training instance.
 
 ## Usage
 For Python2 and Python3 dependencies, see `requirements.txt`. We assume that `python` and `pip` correspond to Python2, and `python3` and `pip3` correspond to Python3.
@@ -33,7 +39,6 @@ docker build -t seq2seq:latest .
 docker run -it -v $PWD:/dialogue-seq2seq seq2seq:latest
 ```
 > The code can be found in the `/dialogue-seq2seq` folder.
-
 
 ### Setup & Preprocessing
 ```bash
