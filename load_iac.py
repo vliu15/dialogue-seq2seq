@@ -1,8 +1,9 @@
-#!/usr/local/bin/python
+''' This script loads IAC-v1 dataset '''
 from grab_data.discussion import Dataset, results_root_dir, data_root_dir
 import unicodedata
 import random
 import pickle
+
 
 def load_data():
     data = []

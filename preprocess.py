@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+''' This script preprocesses data '''
 from tqdm import tqdm
 import transformer.Constants as Constants
 import argparse
@@ -8,23 +8,27 @@ import numpy as np
 from nltk import word_tokenize
 from load_glove import create_glove_emb_table
 
+
 def process_sequence(seq, max_post_len, max_disc_len, keep_case):
     ''' Trim to max lengths '''
-    # track trimmed counts for warnings
+    #- Track trimmed counts for warnings
     trimmed_disc_count = 0
     trimmed_post_count = 0
-    # trim discussion lengths to max
+
+    #- Trim discussion lengths to max
     if len(seq) > max_disc_len:
         seq = seq[:max_disc_len]
         trimmed_disc_count += 1
-    # trim post lengths to max
+
+    #- Trim post lengths to max
     for i, post in enumerate(seq):
         post = word_tokenize(post)
         tmp = post
         if len(tmp) > max_post_len:
             tmp = tmp[:max_post_len]
             trimmed_post_count += 1
-        # lowercase normalization if specified
+
+        #- Lowercase normalization if specified
         if not keep_case:
             tmp = [word.lower() for word in tmp]
         if tmp:
@@ -44,15 +48,17 @@ def read_instances(inst, max_post_len, max_disc_len, keep_case, split_name):
             ...
         ]
     '''
-    # generate all src and tgt insts
+    #- Generate all src and tgt insts
     src_insts = []
     tgt_insts = []
-    # log counts of trimmed sequences
+
+    #- Log counts of trimmed sequences
     trimmed_disc_count_src = 0
     trimmed_post_count_src = 0
     trimmed_disc_count_tgt = 0
     trimmed_post_count_tgt = 0
-    # iterate through each dictionary
+
+    #- Iterate through each dictionary
     for disc in tqdm(inst):
         src_inst, tdcs, tpcs = process_sequence(disc['src'], max_post_len, max_disc_len, keep_case)
         tgt_inst, tdct, tpct = process_sequence(disc['tgt'], max_post_len, max_disc_len, keep_case)
@@ -85,14 +91,14 @@ def read_instances(inst, max_post_len, max_disc_len, keep_case, split_name):
     return src_insts, tgt_insts
 
 def prune(src_word_insts, tgt_word_insts, split_name):
-    # check that there are same number of src/tgt instances
+    #- Check that there are same number of src / tgt instances
     if len(src_word_insts) != len(tgt_word_insts):
         print('[Warning] The {} instance count is not equal.'.format(split_name))
         min_inst_count = min(len(src_word_insts), len(tgt_word_insts))
         src_word_insts = src_word_insts[:min_inst_count]
         tgt_word_insts = tgt_word_insts[:min_inst_count]
 
-    # check that each instances has same number of src/tgt sequences
+    #- Check that each instances has same number of src / tgt sequences
     mismatch_count = 0
     for idx in range(len(tgt_word_insts)):
         s = src_word_insts[idx]
@@ -106,13 +112,13 @@ def prune(src_word_insts, tgt_word_insts, split_name):
     if mismatch_count > 0:
         print('[Warning] There are {} mismatches in {} sequences.'.format(mismatch_count, split_name))
 
-    # filter empty instances and sequences
+    #- Filter empty instances and sequences
     empty_count = 0
     src, tgt = [], []
-    # iterate per instance
+    #- Iterate per instance
     for src_inst, tgt_inst in zip(src_word_insts, tgt_word_insts):
         s, t = [], []
-        # iterate per sequence
+        #- Iterate per sequence
         for src_seq, tgt_seq in zip(src_inst, tgt_inst):
             if src_seq and tgt_seq:
                 s.append(src_seq)
@@ -129,7 +135,6 @@ def prune(src_word_insts, tgt_word_insts, split_name):
 
 def build_vocab_idx(word_insts, min_word_count):
     ''' Generate vocabulary given minimum count threshold '''
-
     full_vocab = set([w for thread in word_insts for seq in thread for w in seq])
     print('[Info] Original Vocabulary size =', len(full_vocab))
 
@@ -162,8 +167,8 @@ def build_vocab_idx(word_insts, min_word_count):
 def convert_instance_to_idx_seq(word_insts, word2idx, unk_prop_max, split_name):
     ''' Map words to idx sequence '''
     def check_unk_prop(d):
-        # p is a post of word indices
-        count_unks = lambda p: sum(1 for t in p if t == Constants.UNK)
+        ''' Calculates <UNK> proportion in a given sequence '''
+        count_unks = lambda p: sum(1 for t in p if t == Constants.UNK)  # p is a post of word indices
 
         num_unks = float(sum(count_unks(p) for p in d))
         num_toks = float(sum(len(p) for p in d))

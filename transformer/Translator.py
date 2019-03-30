@@ -8,6 +8,7 @@ from tqdm import tqdm
 from transformer.Models import Transformer
 from transformer.Beam import Beam
 
+
 class Translator(object):
     ''' Load with trained model and handle the beam search '''
 
@@ -15,6 +16,7 @@ class Translator(object):
         self.opt = opt
         self.device = torch.device('cuda' if opt.cuda else 'cpu')
 
+        #- Allow inference on CPU if trained on GPU
         try:
             checkpoint = torch.load(opt.model)
         except:
@@ -22,6 +24,7 @@ class Translator(object):
         model_opt = checkpoint['settings']
         self.model_opt = model_opt
 
+        #- Initialize model
         model = Transformer(
             model_opt.src_vocab_size,
             model_opt.tgt_vocab_size,
@@ -41,6 +44,7 @@ class Translator(object):
             src_emb_file=model_opt.src_emb_file,
             tgt_emb_file=model_opt.tgt_emb_file)
 
+        #- Load model weights
         self.state_dict = checkpoint['model']
         model.load_state_dict(self.state_dict)
         print('[Info] Trained model state loaded.')
@@ -56,12 +60,11 @@ class Translator(object):
         ''' Translation work in one batch '''
 
         def get_inst_idx_to_tensor_position_map(inst_idx_list):
-            ''' Indicate the position of an instance in a tensor. '''
+            ''' Indicate the position of an instance in a tensor '''
             return {inst_idx: tensor_position for tensor_position, inst_idx in enumerate(inst_idx_list)}
 
         def collect_active_part(beamed_tensor, curr_active_inst_idx, n_prev_active_inst, n_bm):
-            ''' Collect tensor parts associated to active instances. '''
-
+            ''' Collect tensor parts associated to active instances '''
             _, *d_hs = beamed_tensor.size()
             n_curr_active_inst = len(curr_active_inst_idx)
             new_shape = (n_curr_active_inst * n_bm, *d_hs)
@@ -74,8 +77,7 @@ class Translator(object):
 
         def collate_active_info(
                 src_seq, src_enc, inst_idx_to_position_map, active_inst_idx_list):
-            # Sentences which are still active are collected,
-            # so the decoder will not run on completed sentences.
+            #- Active sentences are collected so decoder will not run on completed sentences
             n_prev_active_inst = len(inst_idx_to_position_map)
             active_inst_idx = [inst_idx_to_position_map[k] for k in active_inst_idx_list]
             active_inst_idx = torch.LongTensor(active_inst_idx).to(self.device)
@@ -124,7 +126,7 @@ class Translator(object):
             dec_pos = prepare_beam_dec_pos(len_dec_seq, n_active_inst, n_bm)
             word_prob = predict_word(dec_seq, dec_pos, src_seq, enc_output, n_active_inst, n_bm)
 
-            # Update the beam with predicted word prob information and collect incomplete instances
+            #- Update the beam with predicted word prob information and collect incomplete instances
             active_inst_idx_list = collect_active_inst_idx_list(
                 inst_dec_beams, word_prob, inst_idx_to_position_map)
 
@@ -141,8 +143,7 @@ class Translator(object):
             return all_hyp, all_scores
 
         def restructure_batch(batch):
-            ''' Expects batch of structure List[seq, batch, pos] 
-                Restructures to List[batch, seq, pos]             '''
+            ''' Restructures List[seq, batch, pos] to List[batch, seq, pos] '''
             batch_size = len(batch[0])
             seq_len = len(batch)
             restructured = [ [] ] * batch_size
@@ -152,7 +153,7 @@ class Translator(object):
             return restructured
 
         with torch.no_grad():
-            #-- Prepare to step through sequences
+            #- Prepare to step through sequences
             src_seq, src_pos = src_seq.to(self.device), src_pos.to(self.device)
             batch_size, n_steps, _ = src_seq.size()
             self.model.session.zero_lstm_state(batch_size, self.device)
@@ -161,26 +162,26 @@ class Translator(object):
 
             for i in tqdm(range(n_steps),
                 mininterval=2, desc='  - (Test / Posts)', leave=False):
-                #-- Encode
+                #- Encode
                 src_seq_step = src_seq[:, i, :].squeeze(1)
                 src_pos_step = src_pos[:, i, :].squeeze(1)
                 src_enc_step, *_ = self.model.encoder(src_seq_step, src_pos_step)
                 src_enc_step, *_ = self.model.session(src_enc_step)
 
-                #-- Repeat data for beam search
+                #- Repeat data for beam search
                 n_bm = self.opt.beam_size
                 n_inst, len_s, d_h = src_enc_step.size()
                 src_seq_step = src_seq_step.repeat(1, n_bm).view(n_inst * n_bm, len_s)
                 src_enc_step = src_enc_step.repeat(1, n_bm, 1).view(n_inst * n_bm, len_s, d_h)
 
-                #-- Prepare beams
+                #- Prepare beams
                 inst_dec_beams = [Beam(n_bm, device=self.device) for _ in range(n_inst)]
 
-                #-- Bookkeeping for active or not
+                #- Bookkeeping for active or not
                 active_inst_idx_list = list(range(n_inst))
                 inst_idx_to_position_map = get_inst_idx_to_tensor_position_map(active_inst_idx_list)
 
-                #-- Decode
+                #- Decode
                 for len_dec_seq in tqdm(range(1, self.model_opt.max_post_len + 1),
                     mininterval=2, desc='  - (Test / Words)', leave=False):
 
@@ -195,7 +196,7 @@ class Translator(object):
 
                 hyp, scores = collect_hypothesis_and_scores(inst_dec_beams, self.opt.n_best)
 
-                #-- Accumulate per step
+                #- Accumulate per step
                 batch_hyp.append(hyp)
                 batch_scores.append(scores)
 

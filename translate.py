@@ -1,24 +1,23 @@
-''' Translate input text with trained model. '''
+''' Translate input text with trained model '''
 
 import torch
 import torch.utils.data
 import argparse
 from tqdm import tqdm
 import pickle
-
 from dataset import collate_fn, TranslationDataset
 from transformer.Translator import Translator
 
-def main():
-    '''Main Function'''
 
+def main():
+    ''' Main function '''
     parser = argparse.ArgumentParser(description='translate.py')
 
     parser.add_argument('-model', required=True, help='Path to model .chkpt file')
     parser.add_argument('-test_file', required=True, help='Test pickle file for validation')
     parser.add_argument('-output', default='outputs.txt', help='Path to output the predictions (each line will be the decoded sequence')
     parser.add_argument('-beam_size', type=int, default=5, help='Beam size')
-    # parser.add_argument('-batch_size', type=int, default=4, help='Batch size')
+    parser.add_argument('-batch_size', type=int, default=32, help='Batch size')
     parser.add_argument('-n_best', type=int, default=1, help='If verbose is set, will output the n_best decoded sentences')
     parser.add_argument('-no_cuda', action='store_true')
 

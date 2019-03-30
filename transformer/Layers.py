@@ -1,8 +1,9 @@
 ''' Define the Layers '''
 import torch
 import torch.nn as nn
-from transformer.SubLayers import MultiHeadAttention, PositionwiseFeedForward, \
-    MultiplicativeAttention, DotProductAttention
+from transformer.Sublayers import MultiHeadAttention, PositionwiseFeedForward
+from transformer.Modules import MultiplicativeAttention, DotProductAttention
+
 
 class EncoderLayer(nn.Module):
     ''' Compose with two layers '''
@@ -24,8 +25,11 @@ class EncoderLayer(nn.Module):
         return enc_output, enc_slf_attn
 
 class AttentionLayer(nn.Module):
+    ''' Compose with two layers '''
+
     def __init__(self, d_hidden, d_model, dropout=0.1):
         super().__init__()
+        #- Select attention mechanism depending on hidden sizes
         if d_hidden != d_model:
             self.attn = MultiplicativeAttention(d_model, d_hidden)
         else:
