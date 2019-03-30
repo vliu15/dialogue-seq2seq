@@ -26,7 +26,7 @@ On the IAC dataset, we are able to to achieve ~25% word accuracy rate and a 80 p
 - We find that a few thousand warmup steps to a learning rate around 1e-3 yields best early training.
 - In general, increasing the complexity of the model does little on this task and dataset. We find that 3 Transformer encoder-decoder layers is a reasonable lower-bound.
 - We find that training with the MLE objective instead of the MMI objective with cross entropy loss yields stabler training.
-- For faster convergence, we adopt two phases of pretraining to familiarize the model with language modeling: denoising the autoencoder by training it to predict its input sequence, and pair prediction, where we flatten each subsequence pair is a training instance.
+- For faster convergence, we adopt two phases of pretraining to familiarize the model with language modeling: denoising the autoencoder by training it to predict its input sequence, and pair prediction, where each subsequence pair is a training instance.
 
 ## Usage
 For Python2 and Python3 dependencies, see `requirements.txt`. We assume that `python` and `pip` correspond to Python2, and `python3` and `pip3` correspond to Python3.
