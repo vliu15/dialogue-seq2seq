@@ -1,8 +1,8 @@
 # Sequence-to-Sequence Generative Dialogue Systems
-This is a PyTorch adaptation of the Transformer model in "[Attention is All You Need](https://arxiv.org/abs/1706.03762)" for dialogue-based memory systems. We borrow the Transformer encoder and decoder to encode input and generate response, respectively. The encoded input updates a hidden state in a simple RNN, which serves as a session memory. We train our dialogue system with the [Internet Argument Corpus v1](https://nlds.soe.ucsc.edu/iac).
+This is a Pytorch adaptation of the Transformer model in "[Attention is All You Need](https://arxiv.org/abs/1706.03762)" for memory-based generative dialogue systems. We borrow the Transformer encoder and decoder to encode decode individual responses. The encoded input updates a hidden state in an LSTM, which serves as a session memory. We train our dialogue system with the "[Internet Argument Corpus v1](https://nlds.soe.ucsc.edu/iac)".
 
 ## Transformer
-We borrow the code for the Transformer encoder and decoder from [this](https://github.com/jadore801120/attention-is-all-you-need-pytorch) repository.
+We adapt the code for the Transformer encoder and decoder from [this](https://github.com/jadore801120/attention-is-all-you-need-pytorch) repository.
 
 > The official Tensorflow Implementation can be found in: [tensorflow/tensor2tensor](https://github.com/tensorflow/tensor2tensor/blob/master/tensor2tensor/models/transformer.py).
 
