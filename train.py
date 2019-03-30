@@ -9,10 +9,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data
 import numpy as np
-import transformer.Constants as Constants
 from dataset import TranslationDataset, paired_collate_fn
-from transformer.Models import Transformer
-from transformer.Optim import ScheduledOptim
+import seq2seq.Constants as Constants
+from seq2seq.Models import Seq2Seq
+from seq2seq.Optim import ScheduledOptim
 
 
 def cal_performance(pred, gold, smoothing=False, mmi_factor=1.0):
@@ -219,7 +219,7 @@ def train(model, training_data, validation_data, optimizer, device, opt, epoch):
         start = time.time()
         train_loss, train_accu = train_epoch(
             model, training_data, optimizer, device, opt.mmi_factor, smoothing=opt.label_smoothing)
-        print('  - (Training) ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
+        print('  - (Training)   ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
               'loss/word: {loss:8.5f}, elapse: {elapse:3.3f} min'.format(
                   ppl=math.exp(min(train_loss, 100)), accu=100*train_accu,
                   loss=train_loss, elapse=(time.time()-start)/60))
@@ -322,7 +322,7 @@ def main():
 
     #- Initialize model
     device = torch.device('cuda' if opt.cuda else 'cpu')
-    transformer = Transformer(
+    seq2seq = Seq2Seq(
         opt.src_vocab_size,
         opt.tgt_vocab_size,
         opt.max_post_len,
@@ -342,13 +342,13 @@ def main():
         tgt_emb_file=opt.tgt_emb_file).to(device)
 
     #- Output total number of parameters
-    model_parameters = filter(lambda p: p.requires_grad, transformer.parameters())
+    model_parameters = filter(lambda p: p.requires_grad, seq2seq.parameters())
     n_params = sum([np.prod(p.size()) for p in model_parameters])
     print('Total number of parameters: {n:3.3}M'.format(n=n_params/1000000.0))
 
     #- Set up optimizer
     optimizer = ScheduledOptim(
-        optim.Adam(filter(lambda p: p.requires_grad, transformer.parameters()), betas=(0.9, 0.98), eps=1e-09),
+        optim.Adam(filter(lambda p: p.requires_grad, seq2seq.parameters()), betas=(0.9, 0.98), eps=1e-09),
         opt.d_model, 
         opt.n_warmup_steps, 
         lr=opt.lr
@@ -359,7 +359,7 @@ def main():
         checkpoint = torch.load(opt.load_model + '.chkpt')
         epoch = checkpoint['epoch']
         try:
-            transformer.load_state_dict(checkpoint['model'])
+            seq2seq.load_state_dict(checkpoint['model'])
             print('[Info] Trained model state loaded.')
         except:
             print('[Info] Model state loading failed. Checkpoint settings: {}'.format(model_opt))
@@ -369,7 +369,7 @@ def main():
         print('[Info] Initialized new model.')
 
     #- Train model
-    train(transformer, training_data, validation_data, optimizer, device, opt, epoch + 1)
+    train(seq2seq, training_data, validation_data, optimizer, device, opt, epoch + 1)
 
 def prepare_dataloaders(data, opt):
     ''' Prepare Pytorch dataloaders '''

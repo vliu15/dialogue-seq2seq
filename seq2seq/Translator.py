@@ -5,8 +5,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from transformer.Models import Transformer
-from transformer.Beam import Beam
+from seq2seq.Models import Seq2Seq
+from seq2seq.Beam import Beam
 
 
 class Translator(object):
@@ -25,7 +25,7 @@ class Translator(object):
         self.model_opt = model_opt
 
         #- Initialize model
-        model = Transformer(
+        model = Seq2Seq(
             model_opt.src_vocab_size,
             model_opt.tgt_vocab_size,
             model_opt.max_post_len,

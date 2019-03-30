@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformer.Modules import ScaledDotProductAttention
+from seq2seq.Modules import ScaledDotProductAttention
 
 class MultiHeadAttention(nn.Module):
     ''' Multi-Head Attention module '''

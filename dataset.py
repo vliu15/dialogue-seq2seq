@@ -2,7 +2,7 @@
 import numpy as np
 import torch
 import torch.utils.data
-from transformer import Constants
+from seq2seq import Constants
 
 
 def paired_collate_fn(insts):

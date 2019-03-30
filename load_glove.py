@@ -3,7 +3,7 @@ import numpy as np
 import pickle
 import argparse
 from tqdm import tqdm
-from transformer import Constants
+from seq2seq import Constants
 
 
 def load_glove(glove_path, vocab=set([])):

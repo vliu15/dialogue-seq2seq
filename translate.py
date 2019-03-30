@@ -5,7 +5,7 @@ import argparse
 from tqdm import tqdm
 import pickle
 from dataset import collate_fn, TranslationDataset
-from transformer.Translator import Translator
+from seq2seq.Translator import Translator
 
 
 def main():

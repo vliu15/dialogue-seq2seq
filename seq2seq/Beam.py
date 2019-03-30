@@ -7,7 +7,7 @@
 
 import torch
 import numpy as np
-import transformer.Constants as Constants
+import seq2seq.Constants as Constants
 
 
 class Beam():

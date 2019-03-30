@@ -1,9 +1,9 @@
-''' Define the Transformer model '''
+''' Define the Seq2Seq model '''
 import torch
 import torch.nn as nn
 import numpy as np
-import transformer.Constants as Constants
-from transformer.Layers import EncoderLayer, DecoderLayer, AttentionLayer
+import seq2seq.Constants as Constants
+from seq2seq.Layers import EncoderLayer, DecoderLayer, AttentionLayer
 
 
 def get_non_pad_mask(seq):
@@ -193,7 +193,7 @@ class Decoder(nn.Module):
             return dec_output, dec_slf_attn_list, dec_enc_attn_list
         return dec_output,
 
-class Transformer(nn.Module):
+class Seq2Seq(nn.Module):
     ''' A sequence to sequence model with attention mechanism. '''
 
     def __init__(
