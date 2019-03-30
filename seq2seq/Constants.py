@@ -1,3 +1,4 @@
+''' This file contains constants for special tokens '''
 
 PAD = 0
 UNK = 1

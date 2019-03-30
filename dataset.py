@@ -1,8 +1,9 @@
+''' This script defines custom Dataset class '''
 import numpy as np
 import torch
 import torch.utils.data
+from seq2seq import Constants
 
-from transformer import Constants
 
 def paired_collate_fn(insts):
     src_insts, tgt_insts = list(zip(*insts))
@@ -13,17 +14,23 @@ def paired_collate_fn(insts):
 def collate_fn(insts):
     ''' Pad the instance to the max seq length in batch '''
 
-    max_len = max(len(inst) for inst in insts)
+    max_disc_len = max(len(disc) for disc in insts)
+    max_post_len = max(len(post) for disc in insts for post in disc)
 
-    batch_seq = np.array([
-        inst + [Constants.PAD] * (max_len - len(inst))
-        for inst in insts])
+    #- Pad posts in insts
+    pad_posts = [[post + [Constants.PAD] * (max_post_len - len(post))
+        for post in disc] for disc in insts]
+
+    #- Pad discs in insts
+    pad_discs = np.array([
+        disc + [[Constants.BOS] + [Constants.PAD] * (max_post_len - 1)] * (max_disc_len - len(disc))
+        for disc in pad_posts])
 
     batch_pos = np.array([
-        [pos_i+1 if w_i != Constants.PAD else 0
-         for pos_i, w_i in enumerate(inst)] for inst in batch_seq])
+        [[pos_i+1 if w_i != Constants.PAD else 0 for pos_i, w_i in enumerate(post)]
+         for post in disc] for disc in pad_discs])
 
-    batch_seq = torch.LongTensor(batch_seq)
+    batch_seq = torch.LongTensor(pad_discs)
     batch_pos = torch.LongTensor(batch_pos)
 
     return batch_seq, batch_pos
