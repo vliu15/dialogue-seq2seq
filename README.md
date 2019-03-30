@@ -29,7 +29,7 @@ On the IAC dataset, we are able to to achieve ~25% word accuracy rate and a 80 p
 - For faster convergence, we adopt two phases of pretraining to familiarize the model with language modeling: denoising the autoencoder by training it to predict its input sequence, and pair prediction, where each subsequence pair is a training instance.
 
 ## Usage
-For Python2 and Python3 dependencies, see `requirements.txt`. We assume that `python` and `pip` correspond to Python2, and `python3` and `pip3` correspond to Python3.
+For Python2 and Python3 dependencies, see `requirements.txt`. We assume that `python2` and `pip2` correspond to Python2, and `python3` and `pip3` correspond to Python3.
 
 ### Docker
 Run the following command to build and run a Docker container (without data) with all dependencies:
