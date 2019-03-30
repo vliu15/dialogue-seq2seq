@@ -1,7 +1,7 @@
 ''' Define the Layers '''
 import torch
 import torch.nn as nn
-from transformer.Sublayers import MultiHeadAttention, PositionwiseFeedForward
+from transformer.SubLayers import MultiHeadAttention, PositionwiseFeedForward
 from transformer.Modules import MultiplicativeAttention, DotProductAttention
 
 

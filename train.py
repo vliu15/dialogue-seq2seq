@@ -21,7 +21,7 @@ def cal_performance(pred, gold, smoothing=False, mmi_factor=1.0):
     1) label smoothing if specified 
     2) maximal mutual information (MMI) if specified
     '''
-    if mmi > 0:
+    if mmi_factor > 0:
         #- Calculate CE loss with MMI objective
         pred_session, pred_no_session = torch.split(pred, int(pred.shape[0]/2), dim=0)
         loss = cal_mmi_loss(pred_session, pred_no_session, gold, smoothing=smoothing, mmi_factor=mmi_factor)
@@ -104,7 +104,7 @@ def train_epoch(model, training_data, optimizer, device, mmi_factor, smoothing=T
     #- Iterate through batches for training
     for batch in tqdm(
             training_data, mininterval=2,
-            desc='  - (Training / Batches)   ', leave=False):
+            desc='  - (Training)   ', leave=False):
 
         #- Prepare data
         src_seq, src_pos, tgt_seq, tgt_pos = map(lambda x: x.to(device), batch)
@@ -127,7 +127,7 @@ def train_epoch(model, training_data, optimizer, device, mmi_factor, smoothing=T
         loss = 0
         n_correct = 0
         for i in range(n_steps):
-            loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=smoothing, mmi=mmi_factor)
+            loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=smoothing, mmi_factor=mmi_factor)
             loss += loss_
             n_correct += n_correct_
         loss.backward()
@@ -139,6 +139,7 @@ def train_epoch(model, training_data, optimizer, device, mmi_factor, smoothing=T
         total_loss += loss.item()
         n_word_correct += n_correct
         n_word_total += gold.ne(Constants.PAD).sum().item()
+        break
 
     loss_per_word = total_loss/n_word_total
     accuracy = n_word_correct/n_word_total
@@ -157,7 +158,7 @@ def eval_epoch(model, validation_data, device, mmi_factor):
         #- Iterate through validation batches
         for batch in tqdm(
                 validation_data, mininterval=2,
-                desc='  - (Validation / Batches) ', leave=False):
+                desc='  - (Validation) ', leave=False):
 
             #- Prepare data
             src_seq, src_pos, tgt_seq, tgt_pos = map(lambda x: x.to(device), batch)
@@ -218,7 +219,7 @@ def train(model, training_data, validation_data, optimizer, device, opt, epoch):
         start = time.time()
         train_loss, train_accu = train_epoch(
             model, training_data, optimizer, device, opt.mmi_factor, smoothing=opt.label_smoothing)
-        print('  - (Training)   ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
+        print('  - (Training) ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
               'loss/word: {loss:8.5f}, elapse: {elapse:3.3f} min'.format(
                   ppl=math.exp(min(train_loss, 100)), accu=100*train_accu,
                   loss=train_loss, elapse=(time.time()-start)/60))

@@ -40,13 +40,10 @@ python3 train.py -data data/iac/train.data.pt -save_model trained \
 
 > If you want to use pretrained embeddings, specify the embedding table file with `-src_emb_file` and/or `-tgt_emb_file`.
 
-> If training on CUDA device, testing and interactive use must also be on CUDA.
-
 ### Testing
 ```bash
 python3 translate.py -model trained.chkpt -test_file data/iac/test.data.pt
 ```
-> Batch size is same as in training to maintain `LSTMCell` hidden / cell state consistency
 
 ### Interactive Use
 ```bash
