@@ -3,9 +3,7 @@
 # set up dependencies manually due to mixture of python2 and python3
 # make sure Python2 <= pip, python
 # make sure Python3 <= pip3, python3
-pip install nltk
-python -c "import nltk; nltk.download('punkt')"
-pip3 install nltk torch torchvision numpy tqdm
+pip3 install -r requirements.txt
 python3 -c "import nltk; nltk.download('punkt')"
 
 # download iacorpus dataset

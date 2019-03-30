@@ -5,6 +5,7 @@ import argparse
 import pickle
 import torch
 import numpy as np
+from nltk import word_tokenize
 from load_glove import create_glove_emb_table
 
 def process_sequence(seq, max_post_len, max_disc_len, keep_case):
@@ -18,6 +19,7 @@ def process_sequence(seq, max_post_len, max_disc_len, keep_case):
         trimmed_disc_count += 1
     # trim post lengths to max
     for i, post in enumerate(seq):
+        post = word_tokenize(post)
         tmp = post
         if len(tmp) > max_post_len:
             tmp = tmp[:max_post_len]
