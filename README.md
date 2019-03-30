@@ -14,7 +14,7 @@ We borrow the code for the Transformer encoder and decoder from [this](https://g
 The Internet Argument Corpus (IAC) is a collection of discussion posts scraped from political debate forums that we use to benchmark our model. The dataset in total has 11.8k discussions, which amount to about 390k individual posts from users. We define each example to be one discussion, a sequence of posts, which are a sequence of tokens.
 > For generality, we refer to the concept of a discussion as a `seq` and a post as a `subseq`.
 
-On the IAC dataset, we are able to to achieve ~25% word accuracy rate on both training and validation sets with an `<UNK>` pruning threshold in preprocessing. Without this threshold, we achieve ~25% word accuracy rate but at the cost of coherent and interesting output. Below, we provide some details about the default parameters we use.
+On the IAC dataset, we are able to to achieve ~25% word accuracy rate on both training and validation sets with an `<UNK>` pruning threshold in preprocessing. Without this threshold, we achieve ~28% word accuracy rate but at the cost of coherent and interesting output. Below, we provide some details about the default parameters we use.
 
 - Subsequence lengths are set to 50 tokens and sequence lengths are set to 25 subsequences.
 - We throw away all examples that are comprised of >5% of `<UNK>` tokens.
