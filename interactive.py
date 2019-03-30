@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import argparse
 import numpy as np
 from nltk import word_tokenize
-from seq2seq.Models import Transformer
+from seq2seq.Models import Seq2Seq
 from seq2seq.Translator import Translator
 from seq2seq.Beam import Beam
 from seq2seq import Constants
