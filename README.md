@@ -14,7 +14,7 @@ We borrow the code for the Transformer encoder and decoder from [this](https://g
 The Internet Argument Corpus (IAC) is a collection of discussion posts scraped from political debate forums that we use to benchmark our model. The dataset in total has 11.8k discussions, which amount to about 390k individual posts from users. We define each example to be one discussion, a sequence of posts, which are a sequence of tokens.
 > For generality, we refer to the concept of a discussion as a `seq` and a post as a `subseq`.
 
-On the IAC dataset, we are able to to achieve ~25% word accuracy rate on both training and validation sets with an `<UNK>` pruning threshold in preprocessing. Without this threshold, we achieve ~28% word accuracy rate but at the cost of coherent and interesting output. Below, we provide some details about the default parameters we use.
+On the IAC dataset, we are able to to achieve ~25% word accuracy rate and a 80 perplexity score on both training and validation sets with an `<UNK>` pruning threshold in preprocessing. Without this threshold, we achieve ~28% word accuracy rate and a 66 perplexity score but at the cost of coherent and interesting output. Below, we provide some details about the default parameters we use.
 
 - Subsequence lengths are set to 50 tokens and sequence lengths are set to 25 subsequences.
 - We throw away all examples that are comprised of >5% of `<UNK>` tokens.
@@ -30,18 +30,16 @@ For Python2 and Python3 dependencies, see `requirements.txt`. We assume that `py
 Run the following command to build and run a Docker container (without data) with all dependencies:
 ```bash
 docker build -t seq2seq:latest .
-docker run -it -v $PWD:/transformer-rnn-pytorch seq2seq:latest
+docker run -it -v $PWD:/dialogue-seq2seq seq2seq:latest
 ```
 > The code can be found in the `/dialogue-seq2seq` folder.
 
 
-### Setup: Data / Preprocessing
-```
+### Setup & Preprocessing
+```bash
 sh setup.sh
 ```
-> The above command downloads and preprocesses the Internet Argument Corpus v1.1 data dataset.
-
-> Default preprocessing shares vocab between src / tgt, and uses GloVe pretrained embeddings.
+> Default preprocessing shares source/target vocabulary and uses GloVe pretrained embeddings.
 
 ### Training
 ```bash
@@ -49,9 +47,9 @@ python3 train.py -data data/iac/train.data.pt -save_model trained \
   -save_mode best -proj_share_weight -label_smoothing -embs_share_weight \
   -src_emb_file data/glove/src_emb_file.npy -tgt_emb_file data/glove/tgt_emb_file.npy
 ```
-> If your source and target language share one common vocabulary, use the `-embs_share_weight` flag to enable the model to share source/target word embedding if training embeddings.
+> Use the `-embs_share_weight` flag to enable the model to share source/target word embedding if training embeddings.
 
-> If you want to use pretrained embeddings, specify the embedding table file with `-src_emb_file` and/or `-tgt_emb_file`.
+> Use the flags `-src_emb_file` and/or `-tgt_emb_file` to use pretrained embeddings.
 
 ### Testing
 ```bash
