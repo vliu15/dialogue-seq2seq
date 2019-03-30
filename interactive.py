@@ -161,9 +161,9 @@ def interactive(opt):
     del prepro # to save memory
 
     #- Prepare interactive shell
-    interactive = Interactive(opt)
-    max_seq_len = interactive.model_opt.max_post_len
-    print('[Info] Model opts: {}'.format(interactive.model_opt))
+    s2s = Interactive(opt)
+    max_seq_len = s2s.model_opt.max_post_len
+    print('[Info] Model opts: {}'.format(s2s.model_opt))
 
     #- Interact with console
     console_input = ''
@@ -172,8 +172,8 @@ def interactive(opt):
         console_input = input(console_output) # get user input
         if console_input == 'exit':
             break
-        seq, pos = prepare_seq(console_input, max_seq_len, src_word2idx, interactive.device)
-        console_output, score = interactive.translate_batch(seq, pos)
+        seq, pos = prepare_seq(console_input, max_seq_len, src_word2idx, s2s.device)
+        console_output, score = s2s.translate_batch(seq, pos)
         console_output = console_output[0][0]
         score = score[0][0]
         console_output = '[Seq2Seq](score:{score:2.2f}) '.format(score=score.item()) + \
