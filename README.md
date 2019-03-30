@@ -14,8 +14,7 @@ We adapt the code for the Transformer encoder and decoder from [this](https://gi
 The Internet Argument Corpus (IAC) is a collection of discussion posts scraped from political debate forums that we use to benchmark our model. The dataset in total has 11.8k discussions, which amount to about 390k individual posts from users. We define each example to be one discussion, a sequence of posts, which are a sequence of tokens.
 > For generality, we refer to the concept of a discussion as a `seq` and a post as a `subseq`.
 
-We believe we compete with the generative system proposed in the "[Dave the Debater](https://aclweb.org/anthology/W18-5215)" paper that won IBM Best Paper Award in 2018. The generative system described in this paper achieves a perplexity of around 70-80 and generates mediocre responses at best. Their interactive web demo can be found [here](http://114.212.80.
-16:8000/debate/).
+We believe we compete with the generative system proposed in the "[Dave the Debater](https://aclweb.org/anthology/W18-5215)" paper that won IBM Best Paper Award in 2018. The generative system described in this paper achieves a perplexity of around 70-80 and generates mediocre responses at best. Their interactive web demo can be found [here](http://114.212.80.16:8000/debate/).
 
 ### Results
 On the IAC dataset, we are able to to achieve ~25% word accuracy rate and a 80 perplexity score on both training and validation sets with an `<UNK>` pruning threshold in preprocessing. Without this threshold, we achieve ~28% word accuracy rate and a 66 perplexity score but at the cost of coherent and interesting output. Below, we provide some details about the default parameters we use.
