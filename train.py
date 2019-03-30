@@ -17,8 +17,8 @@ from seq2seq.Optim import ScheduledOptim
 
 def cal_performance(pred, gold, smoothing=False, mmi_factor=1.0):
     '''
-    Calculate accuracy and loss with 
-    1) label smoothing if specified 
+    Calculate accuracy and loss with
+    1) label smoothing if specified
     2) maximal mutual information (MMI) if specified
     '''
     if mmi_factor > 0:
@@ -227,7 +227,7 @@ def train(model, training_data, validation_data, optimizer, device, opt, epoch):
         #- Pass through validation data
         start = time.time()
         valid_loss, valid_accu = eval_epoch(model, validation_data, device, opt.mmi_factor)
-        print('  - (Validation) ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
+        print('  - (Validation) gppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
                 'loss/word: {loss:8.5f}, elapse: {elapse:3.3f} min'.format(
                     ppl=math.exp(min(valid_loss, 100)), accu=100*valid_accu,
                     loss=valid_loss, elapse=(time.time()-start)/60))
