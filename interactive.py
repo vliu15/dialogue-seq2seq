@@ -1,14 +1,15 @@
+''' This script handles local interactive inference '''
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import argparse
 import numpy as np
 from nltk import word_tokenize
-
 from transformer.Models import Transformer
 from transformer.Translator import Translator
 from transformer.Beam import Beam
 from transformer import Constants
+
 
 class Interactive(Translator):
     def __init__(self, opt):
@@ -36,8 +37,7 @@ class Interactive(Translator):
 
         def collate_active_info(
                 src_seq, src_enc, inst_idx_to_position_map, active_inst_idx_list):
-            # Sentences which are still active are collected,
-            # so the decoder will not run on completed sentences.
+            #- Active sentences are collected so the decoder will not run on completed sentences
             n_prev_active_inst = len(inst_idx_to_position_map)
             active_inst_idx = [inst_idx_to_position_map[k] for k in active_inst_idx_list]
             active_inst_idx = torch.LongTensor(active_inst_idx).to(self.device)
@@ -108,24 +108,24 @@ class Interactive(Translator):
             #- Zero out hidden state to batch size 1
             self.model.session.zero_lstm_state(1, self.device)
 
-            #-- Encode
+            #- Encode
             src_enc, *_ = self.model.encoder(src_seq, src_pos)
             src_enc, *_ = self.model.session(src_enc)
 
-            #-- Repeat data for beam search
+            #- Repeat data for beam search
             n_bm = self.opt.beam_size
             n_inst, len_s, d_h = src_enc.size()
             src_seq = src_seq.repeat(1, n_bm).view(n_inst * n_bm, len_s)
             src_enc = src_enc.repeat(1, n_bm, 1).view(n_inst * n_bm, len_s, d_h)
 
-            #-- Prepare beams
+            #- Prepare beams
             inst_dec_beams = [Beam(n_bm, device=self.device) for _ in range(n_inst)]
 
-            #-- Bookkeeping for active or not
+            #- Bookkeeping for active or not
             active_inst_idx_list = list(range(n_inst))
             inst_idx_to_position_map = get_inst_idx_to_tensor_position_map(active_inst_idx_list)
 
-            #-- Decode
+            #- Decode
             for len_dec_seq in range(1, self.model_opt.max_post_len + 1):
 
                 active_inst_idx_list = beam_decode_step(
@@ -141,9 +141,9 @@ class Interactive(Translator):
 
         return hyp, scores
     
-
 def interactive(opt):
     def prepare_seq(seq, max_seq_len, word2idx, device):
+        ''' Prepares sequence for inference '''
         seq = word_tokenize(seq[:max_seq_len])
         seq = [word2idx.get(w.lower(), Constants.UNK) for w in seq]
         seq = [Constants.BOS] + seq + [Constants.EOS]
@@ -167,9 +167,11 @@ def interactive(opt):
 
     #- Interact with console
     console_input = ''
-    console_output = '[Seq2Seq](score:--.--) human, what do you have to say?\n[Human] '
-    while console_input != 'exit':
+    console_output = '[Seq2Seq](score:--.--) human , what do you have to say ( type \' exit\' to quit ) ?\n[Human] '
+    while True:
         console_input = input(console_output) # get user input
+        if console_input == 'exit':
+            break
         seq, pos = prepare_seq(console_input, max_seq_len, src_word2idx, seq2seq.device)
         console_output, score = seq2seq.translate_batch(seq, pos)
         console_output = console_output[0][0]
@@ -177,8 +179,7 @@ def interactive(opt):
         console_output = '[Seq2Seq](score:{score:2.2f}) '.format(score=score.item()) + \
             ' '.join([tgt_idx2word.get(word, Constants.UNK_WORD) for word in console_output]) + '\n[Human] '
     
-    print('[Seq2Seq](score:--.--) thanks for talking with me!')
-
+    print('[Seq2Seq](score:--.--) thanks for talking with me !')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='translate.py')

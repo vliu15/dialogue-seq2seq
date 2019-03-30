@@ -17,8 +17,8 @@ RUN alias python=/usr/bin/python2.7
 
 #- Get code
 # WORKDIR /
-# RUN git clone https://github.com/vliu15/transformer-rnn-pytorch.git
+# RUN git clone https://github.com/vliu15/dialogue-seq2seq.git
 
 #- Download data and preprocess
-# WORKDIR /transformer-rnn-pytorch
+# WORKDIR /dialogue-seq2seq
 # RUN sh setup.sh

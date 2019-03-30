@@ -1,13 +1,13 @@
+''' This script builds GloVe word-embedding table '''
 import numpy as np
 import pickle
 import argparse
 from tqdm import tqdm
+from seq2seq import Constants
 
-from transformer import Constants
 
 def load_glove(glove_path, vocab=set([])):
     ''' Loads GloVe embeddings '''
-
     word2emb = {}
     with open(glove_path,'r', encoding="utf-8") as f:
         for line in tqdm(f):
@@ -20,7 +20,6 @@ def load_glove(glove_path, vocab=set([])):
 
 def create_glove_emb_table(word2idx, split_name, glove_path='data/glove/glove.6B.300d.txt', glove_size=300):
     ''' Creates GloVe embedding table and changes word2idx '''
-
     #- Disregard special tokens when looking for glove pairs
     word2idx.pop(Constants.PAD_WORD, None)
     word2idx.pop(Constants.UNK_WORD, None)

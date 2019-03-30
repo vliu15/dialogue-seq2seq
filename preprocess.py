@@ -1,28 +1,34 @@
-#!/usr/local/bin/python3
+''' This script preprocesses data '''
 from tqdm import tqdm
-import transformer.Constants as Constants
+import seq2seq.Constants as Constants
 import argparse
 import pickle
 import torch
 import numpy as np
+from nltk import word_tokenize
 from load_glove import create_glove_emb_table
 
-def process_sequence(seq, max_post_len, max_disc_len, keep_case):
+
+def process_sequence(seq, max_subseq_len, max_seq_len, keep_case):
     ''' Trim to max lengths '''
-    # track trimmed counts for warnings
-    trimmed_disc_count = 0
-    trimmed_post_count = 0
-    # trim discussion lengths to max
-    if len(seq) > max_disc_len:
-        seq = seq[:max_disc_len]
-        trimmed_disc_count += 1
-    # trim post lengths to max
-    for i, post in enumerate(seq):
-        tmp = post
-        if len(tmp) > max_post_len:
-            tmp = tmp[:max_post_len]
-            trimmed_post_count += 1
-        # lowercase normalization if specified
+    #- Track trimmed counts for warnings
+    trimmed_seq_count = 0
+    trimmed_subseq_count = 0
+
+    #- Trim sequssion lengths to max
+    if len(seq) > max_seq_len:
+        seq = seq[:max_seq_len]
+        trimmed_seq_count += 1
+
+    #- Trim subseq lengths to max
+    for i, subseq in enumerate(seq):
+        subseq = word_tokenize(subseq)
+        tmp = subseq
+        if len(tmp) > max_subseq_len:
+            tmp = tmp[:max_subseq_len]
+            trimmed_subseq_count += 1
+
+        #- Lowercase normalization if specified
         if not keep_case:
             tmp = [word.lower() for word in tmp]
         if tmp:
@@ -30,9 +36,9 @@ def process_sequence(seq, max_post_len, max_disc_len, keep_case):
         else:
             seq[i] = None
 
-    return seq, trimmed_disc_count, trimmed_post_count
+    return seq, trimmed_seq_count, trimmed_subseq_count
 
-def read_instances(inst, max_post_len, max_disc_len, keep_case, split_name):
+def read_instances(inst, max_subseq_len, max_seq_len, keep_case, split_name):
     ''' Each inst is a dataset in the following format:
         [
             {
@@ -42,55 +48,57 @@ def read_instances(inst, max_post_len, max_disc_len, keep_case, split_name):
             ...
         ]
     '''
-    # generate all src and tgt insts
+    #- Generate all src and tgt insts
     src_insts = []
     tgt_insts = []
-    # log counts of trimmed sequences
-    trimmed_disc_count_src = 0
-    trimmed_post_count_src = 0
-    trimmed_disc_count_tgt = 0
-    trimmed_post_count_tgt = 0
-    # iterate through each dictionary
-    for disc in tqdm(inst):
-        src_inst, tdcs, tpcs = process_sequence(disc['src'], max_post_len, max_disc_len, keep_case)
-        tgt_inst, tdct, tpct = process_sequence(disc['tgt'], max_post_len, max_disc_len, keep_case)
+
+    #- Log counts of trimmed sequences
+    trimmed_seq_count_src = 0
+    trimmed_subseq_count_src = 0
+    trimmed_seq_count_tgt = 0
+    trimmed_subseq_count_tgt = 0
+
+    #- Iterate through each dictionary
+    for seq in tqdm(inst):
+        src_inst, tdcs, tpcs = process_sequence(seq['src'], max_subseq_len, max_seq_len, keep_case)
+        tgt_inst, tdct, tpct = process_sequence(seq['tgt'], max_subseq_len, max_seq_len, keep_case)
 
         src_insts.append(src_inst)
         tgt_insts.append(tgt_inst)
 
-        trimmed_disc_count_src += tdcs
-        trimmed_post_count_src += tpcs
-        trimmed_disc_count_tgt += tdct
-        trimmed_post_count_tgt += tpct
+        trimmed_seq_count_src += tdcs
+        trimmed_subseq_count_src += tpcs
+        trimmed_seq_count_tgt += tdct
+        trimmed_subseq_count_tgt += tpct
 
 
     print('[Info] Get {} instances from {}'.format(len(src_insts), split_name + '-src'))
     print('[Info] Get {} instances from {}'.format(len(tgt_insts), split_name + '-tgt'))
 
-    if trimmed_disc_count_src > 0:
-        print('[Warning] {}: {} instances are trimmed to the max discussion length {}'
-            .format(split_name + '-src', trimmed_disc_count_src, max_disc_len))
-    if trimmed_post_count_src > 0:
-        print('[Warning] {}: {} subinstances are trimmed to the max post length {}'
-            .format(split_name + '-src', trimmed_post_count_src, max_post_len))
-    if trimmed_disc_count_tgt > 0:
-        print('[Warning] {}: {} instances are trimmed to the max discussion length {}'
-            .format(split_name + '-tgt', trimmed_disc_count_tgt, max_disc_len))
-    if trimmed_post_count_tgt > 0:
-        print('[Warning] {}: {} subinstances are trimmed to the max post length {}'
-            .format(split_name + '-tgt', trimmed_post_count_tgt, max_post_len))
+    if trimmed_seq_count_src > 0:
+        print('[Warning] {}: {} instances are trimmed to the max sequssion length {}'
+            .format(split_name + '-src', trimmed_seq_count_src, max_seq_len))
+    if trimmed_subseq_count_src > 0:
+        print('[Warning] {}: {} subinstances are trimmed to the max subseq length {}'
+            .format(split_name + '-src', trimmed_subseq_count_src, max_subseq_len))
+    if trimmed_seq_count_tgt > 0:
+        print('[Warning] {}: {} instances are trimmed to the max sequssion length {}'
+            .format(split_name + '-tgt', trimmed_seq_count_tgt, max_seq_len))
+    if trimmed_subseq_count_tgt > 0:
+        print('[Warning] {}: {} subinstances are trimmed to the max subseq length {}'
+            .format(split_name + '-tgt', trimmed_subseq_count_tgt, max_subseq_len))
 
     return src_insts, tgt_insts
 
 def prune(src_word_insts, tgt_word_insts, split_name):
-    # check that there are same number of src/tgt instances
+    #- Check that there are same number of src / tgt instances
     if len(src_word_insts) != len(tgt_word_insts):
         print('[Warning] The {} instance count is not equal.'.format(split_name))
         min_inst_count = min(len(src_word_insts), len(tgt_word_insts))
         src_word_insts = src_word_insts[:min_inst_count]
         tgt_word_insts = tgt_word_insts[:min_inst_count]
 
-    # check that each instances has same number of src/tgt sequences
+    #- Check that each instances has same number of src / tgt sequences
     mismatch_count = 0
     for idx in range(len(tgt_word_insts)):
         s = src_word_insts[idx]
@@ -104,13 +112,13 @@ def prune(src_word_insts, tgt_word_insts, split_name):
     if mismatch_count > 0:
         print('[Warning] There are {} mismatches in {} sequences.'.format(mismatch_count, split_name))
 
-    # filter empty instances and sequences
+    #- Filter empty instances and sequences
     empty_count = 0
     src, tgt = [], []
-    # iterate per instance
+    #- Iterate per instance
     for src_inst, tgt_inst in zip(src_word_insts, tgt_word_insts):
         s, t = [], []
-        # iterate per sequence
+        #- Iterate per sequence
         for src_seq, tgt_seq in zip(src_inst, tgt_inst):
             if src_seq and tgt_seq:
                 s.append(src_seq)
@@ -127,7 +135,6 @@ def prune(src_word_insts, tgt_word_insts, split_name):
 
 def build_vocab_idx(word_insts, min_word_count):
     ''' Generate vocabulary given minimum count threshold '''
-
     full_vocab = set([w for thread in word_insts for seq in thread for w in seq])
     print('[Info] Original Vocabulary size =', len(full_vocab))
 
@@ -139,8 +146,8 @@ def build_vocab_idx(word_insts, min_word_count):
 
     word_count = {w: 0 for w in full_vocab}
 
-    for disc in word_insts:
-        for seq in disc:
+    for seq in word_insts:
+        for seq in seq:
             for w in seq:
                 word_count[w] += 1
 
@@ -160,8 +167,8 @@ def build_vocab_idx(word_insts, min_word_count):
 def convert_instance_to_idx_seq(word_insts, word2idx, unk_prop_max, split_name):
     ''' Map words to idx sequence '''
     def check_unk_prop(d):
-        # p is a post of word indices
-        count_unks = lambda p: sum(1 for t in p if t == Constants.UNK)
+        ''' Calculates <UNK> proportion in a given sequence '''
+        count_unks = lambda p: sum(1 for t in p if t == Constants.UNK)  # p is a subseq of word indices
 
         num_unks = float(sum(count_unks(p) for p in d))
         num_toks = float(sum(len(p) for p in d))
@@ -170,9 +177,9 @@ def convert_instance_to_idx_seq(word_insts, word2idx, unk_prop_max, split_name):
 
     above_max_count = 0
     src_idx_insts, tgt_idx_insts = [], []
-    for src_disc, tgt_disc in word_insts:
-        src_idx = [[word2idx.get(word, Constants.UNK) for word in post] for post in src_disc]
-        tgt_idx = [[word2idx.get(word, Constants.UNK) for word in post] for post in tgt_disc]
+    for src_seq, tgt_seq in word_insts:
+        src_idx = [[word2idx.get(word, Constants.UNK) for word in subseq] for subseq in src_seq]
+        tgt_idx = [[word2idx.get(word, Constants.UNK) for word in subseq] for subseq in tgt_seq]
         if check_unk_prop(src_idx) and check_unk_prop(tgt_idx):
             src_idx_insts.append(src_idx)
             tgt_idx_insts.append(tgt_idx)
@@ -189,8 +196,8 @@ def main():
     parser.add_argument('-valid_file', required=True)
     parser.add_argument('-test_file', required=True)
     parser.add_argument('-save_dir', required=True)
-    parser.add_argument('-max_post_len', type=int, default=50)
-    parser.add_argument('-max_disc_len', type=int, default=25)
+    parser.add_argument('-max_subseq_len', type=int, default=50)
+    parser.add_argument('-max_seq_len', type=int, default=25)
     parser.add_argument('-min_word_count', type=int, default=15)     # set to 1.0 to include all unique tokens
     parser.add_argument('-unk_prop_max', type=float, default=0.05)  # set to 1.0 to disregard <unk> proportions
     parser.add_argument('-keep_case', action='store_true')
@@ -199,7 +206,7 @@ def main():
     parser.add_argument('-use_glove_emb', action='store_true')
 
     opt = parser.parse_args()
-    opt.max_token_post_len = opt.max_post_len + 2 # include the <s> and </s>
+    opt.max_token_subseq_len = opt.max_subseq_len + 2 # include the <s> and </s>
 
     ##-- training set
     print('[Info] Load training set.')
@@ -208,7 +215,7 @@ def main():
         with open(train_file, 'rb') as f:
             train += pickle.load(f)
     train_src_word_insts, train_tgt_word_insts = read_instances(
-        train, opt.max_post_len, opt.max_disc_len, opt.keep_case, 'train')
+        train, opt.max_subseq_len, opt.max_seq_len, opt.keep_case, 'train')
     # prune for mismatches and empty instances / sequences
     print('[Info] Prune empty sentences and src/tgt mismatches.')
     train_src_word_insts, train_tgt_word_insts = prune(
@@ -219,7 +226,7 @@ def main():
     with open(opt.valid_file, 'rb') as f:
         val = pickle.load(f)
     val_src_word_insts, val_tgt_word_insts = read_instances(
-        val, opt.max_post_len, opt.max_disc_len, opt.keep_case, 'valid')
+        val, opt.max_subseq_len, opt.max_seq_len, opt.keep_case, 'valid')
     # prune for mismatches and empty instances / sequences
     print('[Info] Prune empty sentences and src/tgt mismatches.')
     val_src_word_insts, val_tgt_word_insts = prune(
@@ -230,7 +237,7 @@ def main():
     with open(opt.test_file, 'rb') as f:
         test = pickle.load(f)
     test_src_word_insts, test_tgt_word_insts = read_instances(
-        test, opt.max_post_len, opt.max_disc_len, opt.keep_case, 'test')
+        test, opt.max_subseq_len, opt.max_seq_len, opt.keep_case, 'test')
     # prune for mismatches and empty instances / sequences
     print('[Info] Prune empty sentences and src/tgt mismatches.')
     test_src_word_insts, test_tgt_word_insts = prune(

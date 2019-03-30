@@ -1,24 +1,22 @@
-''' Translate input text with trained model. '''
-
+''' Translate input text with trained model '''
 import torch
 import torch.utils.data
 import argparse
 from tqdm import tqdm
 import pickle
-
 from dataset import collate_fn, TranslationDataset
-from transformer.Translator import Translator
+from seq2seq.Translator import Translator
+
 
 def main():
-    '''Main Function'''
-
+    ''' Main function '''
     parser = argparse.ArgumentParser(description='translate.py')
 
     parser.add_argument('-model', required=True, help='Path to model .chkpt file')
     parser.add_argument('-test_file', required=True, help='Test pickle file for validation')
     parser.add_argument('-output', default='outputs.txt', help='Path to output the predictions (each line will be the decoded sequence')
     parser.add_argument('-beam_size', type=int, default=5, help='Beam size')
-    # parser.add_argument('-batch_size', type=int, default=4, help='Batch size')
+    parser.add_argument('-batch_size', type=int, default=16, help='Batch size')
     parser.add_argument('-n_best', type=int, default=1, help='If verbose is set, will output the n_best decoded sentences')
     parser.add_argument('-no_cuda', action='store_true')
 
@@ -28,7 +26,6 @@ def main():
     #- Prepare Translator
     translator = Translator(opt)
     print('[Info] Model opts: {}'.format(translator.model_opt))
-    opt.batch_size = translator.model_opt.batch_size # for LSTM Cell hidden / cell state consistency
 
     #- Prepare DataLoader
     test_data = torch.load(opt.test_file)
@@ -48,14 +45,14 @@ def main():
 
     print('[Info] Evaluate on test set.')
     with open(opt.output, 'w') as f:
-        for batch in tqdm(test_loader, mininterval=2, desc='  - (Test / Discussions)', leave=False):
+        for batch in tqdm(test_loader, mininterval=2, desc='  - (Testing)', leave=False):
             all_hyp, all_scores = translator.translate_batch(*batch) # structure: List[batch, seq, pos]
-            for disc in all_hyp:
+            for inst in all_hyp:
                 f.write('[')
-                for post in disc:
-                    post = post[0]
-                    pred_post = ' '.join([test_loader.dataset.tgt_idx2word[word] for word in post])
-                    f.write('\t' + pred_post + '\n')
+                for seq in inst:
+                    seq = seq[0]
+                    pred_seq = ' '.join([test_loader.dataset.tgt_idx2word[word] for word in seq])
+                    f.write('\t' + pred_seq + '\n')
                 f.write(']\n')
     print('[Info] Finished.')
 
