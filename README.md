@@ -49,7 +49,7 @@ sh setup.sh
 
 ### Training
 ```bash
-python train.py -data data/iac/train.data.pt -save_model trained \
+python train.py -data data/iac/train.data.pt -save_model seq2seq -log seq2seq \
   -save_mode best -proj_share_weight -label_smoothing -embs_share_weight \
   -src_emb_file data/glove/src_emb_file.npy -tgt_emb_file data/glove/tgt_emb_file.npy
 ```
@@ -59,10 +59,10 @@ python train.py -data data/iac/train.data.pt -save_model trained \
 
 ### Testing
 ```bash
-python translate.py -model trained.chkpt -test_file data/iac/test.data.pt
+python translate.py -model seq2seq.chkpt -test_file data/iac/test.data.pt
 ```
 
 ### Interactive Use
 ```bash
-python interactive.py -model trained.chkpt -prepro_file data/iac/train.data.pt
+python interactive.py -model seq2seq.chkpt -prepro_file data/iac/train.data.pt
 ```
