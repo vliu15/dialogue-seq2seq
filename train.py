@@ -274,7 +274,7 @@ def main():
     parser.add_argument('-src_emb_file', type=str, default='')
     parser.add_argument('-tgt_emb_file', type=str, default='')
 
-    parser.add_argument('-d_word_vec', type=int, default=512)
+    parser.add_argument('-d_word_vec', type=int, default=300)
     parser.add_argument('-d_hidden', type=int, default=512)
     # parser.add_argument('-d_model', type=int, default=512)
     parser.add_argument('-d_inner_hid', type=int, default=512)
