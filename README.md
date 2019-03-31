@@ -32,10 +32,10 @@ We believe we compete with the generative system proposed in the "[Dave the Deba
 On the IAC dataset, we are able to to achieve ~25% word accuracy rate and a 80 perplexity score on both training and validation sets with an `<UNK>` pruning threshold in preprocessing. Without this threshold, we achieve ~28% word accuracy rate and a 66 perplexity score but at the cost of coherent and interesting output. Below, we provide some details about the default parameters we use.
 
 - Subsequence lengths are set to 50 tokens and sequence lengths are set to 25 subsequences.
-- We throw away all examples that are comprised of >5% of `<UNK>` tokens.
-- We limit our vocabulary to 17k by setting a minimum word occurrence of 15.
+- We throw away all examples that are comprised of >7.5% of `<UNK>` tokens.
+- We limit our vocabulary to 21k by setting a minimum word occurrence of 10.
 - Fine-tuning GloVe embeddings in training adds a 1-2% boost in performance towards convergence.
-- We find that a few thousand warmup steps to a learning rate around 1e-3 yields best early training. We remove learning rate annealing for faster convergence.
+- We find that a few thousand warmup steps to a learning rate around 1e-2 yields best early training. We remove learning rate annealing for faster convergence.
 - In general, increasing the complexity of the model does little on this task and dataset. We find that 3 Transformer encoder-decoder layers is a reasonable lower-bound.
 - We find that training with the MLE objective instead of the MMI objective with cross entropy loss yields stabler training.
 - For faster convergence, we adopt two phases of pretraining to familiarize the model with language modeling: denoising the autoencoder by training it to predict its input sequence, and pair prediction, where each subsequence pair is a training instance.
