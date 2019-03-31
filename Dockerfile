@@ -6,7 +6,7 @@ RUN apt-get install -y git vim wget unzip
 RUN apt-get install -y python python-pip
 
 #- Install additional Python3 dependencies
-RUN pip install nltk && python -c "import nltk; nltk.download('punkt')"
+RUN pip install nltk && python -m nltk.downloader punkt
 
 #- Get IAC code
 WORKDIR /
