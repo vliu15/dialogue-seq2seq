@@ -1,7 +1,10 @@
 # Sequence-to-Sequence Generative Dialogue Systems
 This is a Pytorch adaptation of the Transformer model in "[Attention is All You Need](https://arxiv.org/abs/1706.03762)" for memory-based generative dialogue systems. We borrow the Transformer encoder and decoder to encode decode individual responses. The encoded input updates a hidden state in an LSTM, which serves as a session memory. We train our dialogue system with the "[Internet Argument Corpus v1](https://nlds.soe.ucsc.edu/iac)".
 
-## Transformer
+## Seq2Seq Architecture
+We adopt a hierarchical architecture, where the higher level consists of an LSTM that updates its hidden state with every input, and the lower level consists of Transformer encoder and decoder blocks to process and generate individual responses.
+
+### Local Attention: Transformer
 We adapt the code for the Transformer encoder and decoder from [this](https://github.com/jadore801120/attention-is-all-you-need-pytorch) repository.
 
 > The official Tensorflow Implementation can be found in: [tensorflow/tensor2tensor](https://github.com/tensorflow/tensor2tensor/blob/master/tensor2tensor/models/transformer.py).
@@ -9,6 +12,15 @@ We adapt the code for the Transformer encoder and decoder from [this](https://gi
 <p align="center">
 <img src="http://imgur.com/1krF2R6.png" width="250">
 </p>
+
+### Global Attention: Session Memory
+Because of the Transformer encoder exchanges a sequence of hidden states with the decoder, we must infuse global session information by means of a single hidden state (compatible with an LSTM) while maintaining the shape of the encoder output. To do so, we design the following forward pass:
+
+1. Max-pool across the time axis to extract prominent features.
+2. Take one step through the LSTM with this feature vector.
+3. Compute attention between the updated LSTM state and each position in the encoder output.
+4. Softmax the attention weights to get the attention distribution.
+5. Weight the encoder output accordingly and feed this into the decoder.
 
 ## Internet Argument Corpus
 The Internet Argument Corpus (IAC) is a collection of discussion posts scraped from political debate forums that we use to benchmark our model. The dataset in total has 11.8k discussions, which amount to about 390k individual posts from users. We define each example to be one discussion, a sequence of posts, which are a sequence of tokens.
@@ -23,7 +35,7 @@ On the IAC dataset, we are able to to achieve ~25% word accuracy rate and a 80 p
 - We throw away all examples that are comprised of >5% of `<UNK>` tokens.
 - We limit our vocabulary to 17k by setting a minimum word occurrence of 15.
 - Fine-tuning GloVe embeddings in training adds a 1-2% boost in performance towards convergence.
-- We find that a few thousand warmup steps to a learning rate around 1e-3 yields best early training.
+- We find that a few thousand warmup steps to a learning rate around 1e-3 yields best early training. We remove learning rate annealing for faster convergence.
 - In general, increasing the complexity of the model does little on this task and dataset. We find that 3 Transformer encoder-decoder layers is a reasonable lower-bound.
 - We find that training with the MLE objective instead of the MMI objective with cross entropy loss yields stabler training.
 - For faster convergence, we adopt two phases of pretraining to familiarize the model with language modeling: denoising the autoencoder by training it to predict its input sequence, and pair prediction, where each subsequence pair is a training instance.
