@@ -1,9 +1,5 @@
 #!/bin/bash
 
-#- Set up dependencies where python2->Python2 and python3->Python3
-pip3 install -r requirements.txt
-python3 -c "import nltk; nltk.download('punkt')"
-
 #- Download IACorpus dataset
 if [ ! -d data/iac_v1.1 ]; then
     #- Get dataset and code

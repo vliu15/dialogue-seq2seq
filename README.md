@@ -29,7 +29,7 @@ On the IAC dataset, we are able to to achieve ~25% word accuracy rate and a 80 p
 - For faster convergence, we adopt two phases of pretraining to familiarize the model with language modeling: denoising the autoencoder by training it to predict its input sequence, and pair prediction, where each subsequence pair is a training instance.
 
 ## Usage
-For Python2 and Python3 dependencies, see `requirements.txt`. We assume that `python2` and `pip2` correspond to Python2, and `python3` and `pip3` correspond to Python3.
+For Python3 dependencies, see `requirements.txt`. For consistency, `python2` and `pip2` correspond to Python2, and `python` and `pip` correspond to Python3.
 
 ### Docker
 Run the following command to build and run a Docker container (without data) with all dependencies:
@@ -41,13 +41,15 @@ docker run -it -v $PWD:/dialogue-seq2seq seq2seq:latest
 
 ### Setup & Preprocessing
 ```bash
+pip install -r requirements.txt
+python -c "import nltk; nltk.download('punkt')"
 sh setup.sh
 ```
 > Default preprocessing shares source/target vocabulary and uses GloVe pretrained embeddings.
 
 ### Training
 ```bash
-python3 train.py -data data/iac/train.data.pt -save_model trained \
+python train.py -data data/iac/train.data.pt -save_model trained \
   -save_mode best -proj_share_weight -label_smoothing -embs_share_weight \
   -src_emb_file data/glove/src_emb_file.npy -tgt_emb_file data/glove/tgt_emb_file.npy
 ```
@@ -57,10 +59,10 @@ python3 train.py -data data/iac/train.data.pt -save_model trained \
 
 ### Testing
 ```bash
-python3 translate.py -model trained.chkpt -test_file data/iac/test.data.pt
+python translate.py -model trained.chkpt -test_file data/iac/test.data.pt
 ```
 
 ### Interactive Use
 ```bash
-python3 interactive.py -model trained.chkpt -prepro_file data/iac/train.data.pt
+python interactive.py -model trained.chkpt -prepro_file data/iac/train.data.pt
 ```

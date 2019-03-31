@@ -1,19 +1,17 @@
-FROM pytorch/pytorch:latest
+FROM nvcr.io/nvidia/pytorch:19.03-py3
 
 #- Install system requirements
 RUN apt-get update
 RUN apt-get install -y git vim wget unzip
-RUN apt-get install -y python python-pip python3 python3-pip
+RUN apt-get install -y python python-pip
 
-#- Point `python` to `/usr/bin/python`
-RUN rm /opt/conda/bin/python
-RUN alias python=/usr/bin/python2.7
+#- Install additional Python3 dependencies
+RUN pip install nltk && python -c "import nltk; nltk.download('punkt')"
 
-#- Get code
+#- Get IAC code
 WORKDIR /
 RUN git clone https://github.com/vliu15/dialogue-seq2seq.git
 
-#- Download data and preprocess
-WORKDIR /dialogue-seq2seq
-RUN pip3 install -r requirements.txt
+#- (Optional) Download data and preprocess
+# WORKDIR /dialogue-seq2seq
 # RUN sh setup.sh
