@@ -28,7 +28,7 @@ class Translator(object):
         model = Seq2Seq(
             model_opt.src_vocab_size,
             model_opt.tgt_vocab_size,
-            model_opt.max_post_len,
+            model_opt.max_subseq_len,
             tgt_emb_prj_weight_sharing=model_opt.proj_share_weight,
             emb_src_tgt_weight_sharing=model_opt.embs_share_weight,
             d_k=model_opt.d_k,
@@ -160,8 +160,7 @@ class Translator(object):
 
             batch_hyp, batch_scores = [], []
 
-            for i in tqdm(range(n_steps),
-                mininterval=2, desc='  - (Test / Posts)', leave=False):
+            for i in range(n_steps):
                 #- Encode
                 src_seq_step = src_seq[:, i, :].squeeze(1)
                 src_pos_step = src_pos[:, i, :].squeeze(1)
@@ -182,7 +181,7 @@ class Translator(object):
                 inst_idx_to_position_map = get_inst_idx_to_tensor_position_map(active_inst_idx_list)
 
                 #- Decode
-                for len_dec_seq in tqdm(range(1, self.model_opt.max_post_len + 1),
+                for len_dec_seq in tqdm(range(1, self.model_opt.max_subseq_len + 1),
                     mininterval=2, desc='  - (Test / Words)', leave=False):
 
                     active_inst_idx_list = beam_decode_step(

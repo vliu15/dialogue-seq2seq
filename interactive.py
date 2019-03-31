@@ -126,7 +126,7 @@ class Interactive(Translator):
             inst_idx_to_position_map = get_inst_idx_to_tensor_position_map(active_inst_idx_list)
 
             #- Decode
-            for len_dec_seq in range(1, self.model_opt.max_post_len + 1):
+            for len_dec_seq in range(1, self.model_opt.max_subseq_len + 1):
 
                 active_inst_idx_list = beam_decode_step(
                     inst_dec_beams, len_dec_seq, src_seq, src_enc, inst_idx_to_position_map, n_bm)
@@ -164,7 +164,7 @@ def interactive(opt):
     #- Prepare interactive shell
     nlp = spacy.blank('en')
     s2s = Interactive(opt)
-    max_seq_len = s2s.model_opt.max_post_len
+    max_seq_len = s2s.model_opt.max_subseq_len
     print('[Info] Model opts: {}'.format(s2s.model_opt))
 
     #- Interact with console
