@@ -139,7 +139,6 @@ def train_epoch(model, training_data, optimizer, device, mmi_factor, smoothing=T
         total_loss += loss.item()
         n_word_correct += n_correct
         n_word_total += gold.ne(Constants.PAD).sum().item()
-        break
 
     loss_per_word = total_loss/n_word_total
     accuracy = n_word_correct/n_word_total
