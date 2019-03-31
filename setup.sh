@@ -28,5 +28,5 @@ if [ ! -f data/glove/glove.6B.300d.txt ]; then
 fi
 
 #- Perform preprocessing
-python preprocess.py -train_file data/iac/train.1.pkl,data/iac/train.2.pkl,data/iac/train.3.pkl,data/iac/train.4.pkl \
+python3 preprocess.py -train_file data/iac/train.1.pkl,data/iac/train.2.pkl,data/iac/train.3.pkl,data/iac/train.4.pkl \
     -valid_file data/iac/val.pkl -test_file data/iac/test.pkl -save_dir data/iac -share_vocab -use_glove_emb

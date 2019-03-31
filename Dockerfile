@@ -6,7 +6,7 @@ RUN apt-get install -y git vim wget unzip
 RUN apt-get install -y python python-pip
 
 #- Install additional Python3 dependencies
-RUN pip install nltk && python -m nltk.downloader punkt
+RUN pip install spacy && python -m spacy download en
 
 #- Get IAC code
 WORKDIR /

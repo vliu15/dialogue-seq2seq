@@ -4,10 +4,12 @@ import seq2seq.Constants as Constants
 import argparse
 import pickle
 import torch
+import spacy
 import numpy as np
-from nltk import word_tokenize
 from load_glove import create_glove_emb_table
 
+
+nlp = spacy.blank('en')
 
 def process_sequence(seq, max_subseq_len, max_seq_len, keep_case):
     ''' Trim to max lengths '''
@@ -22,7 +24,8 @@ def process_sequence(seq, max_subseq_len, max_seq_len, keep_case):
 
     #- Trim subseq lengths to max
     for i, subseq in enumerate(seq):
-        subseq = word_tokenize(subseq)
+        subseq = nlp(subseq)
+        subseq = [token.text for token in subseq]
         tmp = subseq
         if len(tmp) > max_subseq_len:
             tmp = tmp[:max_subseq_len]

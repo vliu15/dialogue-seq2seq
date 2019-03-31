@@ -42,7 +42,7 @@ docker run -it -v $PWD:/dialogue-seq2seq seq2seq:latest
 ### Setup & Preprocessing
 ```bash
 pip install -r requirements.txt
-python -c "import nltk; nltk.download('punkt')"
+python -m spacy download en
 sh setup.sh
 ```
 > Default preprocessing shares source/target vocabulary and uses GloVe pretrained embeddings.

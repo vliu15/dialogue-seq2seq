@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import argparse
 import numpy as np
-from nltk import word_tokenize
+import spacy
 from seq2seq.Models import Seq2Seq
 from seq2seq.Translator import Translator
 from seq2seq.Beam import Beam
@@ -144,7 +144,8 @@ class Interactive(Translator):
 def interactive(opt):
     def prepare_seq(seq, max_seq_len, word2idx, device):
         ''' Prepares sequence for inference '''
-        seq = word_tokenize(seq[:max_seq_len])
+        seq = nlp(seq)
+        seq = [token.text for token in seq[:max_seq_len]]
         seq = [word2idx.get(w.lower(), Constants.UNK) for w in seq]
         seq = [Constants.BOS] + seq + [Constants.EOS]
         seq = np.array(seq + [Constants.PAD] * (max_seq_len - len(seq)))
@@ -161,6 +162,7 @@ def interactive(opt):
     del prepro # to save memory
 
     #- Prepare interactive shell
+    nlp = spacy.blank('en')
     s2s = Interactive(opt)
     max_seq_len = s2s.model_opt.max_post_len
     print('[Info] Model opts: {}'.format(s2s.model_opt))
