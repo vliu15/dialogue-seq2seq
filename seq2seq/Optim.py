@@ -22,9 +22,12 @@ class ScheduledOptim():
 
     def _get_lr_scale(self):
         ''' Compute scheduled learning rate '''
+        #- Uncomment for learning rate annealing in Transformer paper
         return np.min([
-            np.power(self.n_current_steps, -0.5),
-            np.power(self.n_warmup_steps, -1.5) * self.n_current_steps])
+            1,
+            np.power(self.n_warmup_steps, -1.0) * self.n_current_steps])
+            # np.power(self.n_current_steps, -0.5),
+            # np.power(self.n_warmup_steps, -1.5) * self.n_current_steps])
 
     def _update_learning_rate(self):
         ''' Learning rate scheduling per step '''
