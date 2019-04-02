@@ -125,6 +125,7 @@ class Session(nn.Module):
 
         #- Extract features
         features = enc_output
+        non_pad_mask = non_pad_mask.byte()
         features[~non_pad_mask] = float('-inf')
         features, _ = torch.max(features, dim=1)
 
