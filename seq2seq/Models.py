@@ -119,17 +119,18 @@ class Session(nn.Module):
         self.c = torch.zeros(batch_size, self.d_hidden).to(device)
 
     def forward(self, enc_output, src_seq, return_attns=False):
-        #- Prepare masks
+        #- Prepare mask
         non_pad_mask = get_non_pad_mask(src_seq)
-        ft_extr_mask = (1 - non_pad_mask) * -float('inf')
         enc_output *= non_pad_mask
 
         #- Extract features
-        features, _ = torch.max(enc_output + ft_extr_mask, dim=1)
+        features = enc_output
+        features[~non_pad_mask] = float('-inf')
+        features, _ = torch.max(features, dim=1)
 
         #- Compute attention with global context
         self.h, self.c = self.memory(features, (self.h, self.c))
-        ses_output, ses_attn_distr = self.attn(enc_output, self.h, ft_extr_mask)
+        ses_output, ses_attn_distr = self.attn(enc_output, self.h, non_pad_mask)
 
         if return_attns:
             return ses_output, ses_attn_distr
