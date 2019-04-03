@@ -122,11 +122,11 @@ class Session(nn.Module):
     def forward(self, enc_output, src_seq, return_attns=False):
         #- Prepare mask
         non_pad_mask = get_non_pad_mask(src_seq)
+        non_pad_mask = non_pad_mask.repeat(1, 1, enc_output.size(-1)).byte()
         enc_output *= non_pad_mask
 
         #- Extract features
         features = enc_output
-        non_pad_mask = non_pad_mask.repeat(1, 1, enc_output.size(-1)).byte()
         features, _ = torch.max(features, dim=1)
 
         #- Compute attention with global context
