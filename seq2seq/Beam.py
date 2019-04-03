@@ -7,6 +7,7 @@
 
 import torch
 import numpy as np
+
 import seq2seq.Constants as Constants
 
 

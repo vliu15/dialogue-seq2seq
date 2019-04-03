@@ -72,7 +72,7 @@ python train.py -data data/iac/train.data.pt -save_model seq2seq -log seq2seq \
 
 ### Testing
 ```bash
-python translate.py -model seq2seq.chkpt -test_file data/iac/test.data.pt
+python test.py -model seq2seq.chkpt -test_file data/iac/test.data.pt
 ```
 
 ### Interactive Use

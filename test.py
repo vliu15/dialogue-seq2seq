@@ -4,7 +4,8 @@ import torch.utils.data
 import argparse
 from tqdm import tqdm
 import pickle
-from dataset import collate_fn, TranslationDataset
+
+from utils.dataset import collate_fn, TranslationDataset
 from seq2seq.Translator import Translator
 
 

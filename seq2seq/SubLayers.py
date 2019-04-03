@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 from seq2seq.Modules import ScaledDotProductAttention
 
 class MultiHeadAttention(nn.Module):

@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 import argparse
 from tqdm import tqdm
+
 from seq2seq import Constants
 
 

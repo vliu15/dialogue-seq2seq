@@ -2,10 +2,40 @@
 import numpy as np
 import torch
 import torch.utils.data
+
 from seq2seq import Constants
 
 
+#- Used by train.py in runtime
+def prepare_dataloaders(data, opt):
+    ''' Prepare Pytorch dataloaders '''
+    train_loader = torch.utils.data.DataLoader(
+        TranslationDataset(
+            src_word2idx=data['dict']['src'],
+            tgt_word2idx=data['dict']['tgt'],
+            src_insts=data['train']['src'],
+            tgt_insts=data['train']['tgt']),
+        num_workers=2,
+        batch_size=opt.batch_size,
+        collate_fn=paired_collate_fn,
+        drop_last=False,
+        shuffle=True)
+
+    valid_loader = torch.utils.data.DataLoader(
+        TranslationDataset(
+            src_word2idx=data['dict']['src'],
+            tgt_word2idx=data['dict']['tgt'],
+            src_insts=data['valid']['src'],
+            tgt_insts=data['valid']['tgt']),
+        num_workers=2,
+        batch_size=opt.batch_size,
+        collate_fn=paired_collate_fn,
+        drop_last=False)
+    return train_loader, valid_loader
+
+#- Used by preprocess.py to prepare datasets
 def paired_collate_fn(insts):
+    ''' Pair source instances with target instances '''
     src_insts, tgt_insts = list(zip(*insts))
     src_insts = collate_fn(src_insts)
     tgt_insts = collate_fn(tgt_insts)
