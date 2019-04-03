@@ -36,9 +36,9 @@ class AttentionLayer(nn.Module):
             self.attn = DotProductAttention(d_model, d_hidden)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, enc_output, ses_hidden, ft_extr_mask):
+    def forward(self, enc_output, ses_hidden, non_pad_mask):
         #- Compute attention distribution
-        attn_distr = self.attn(enc_output, ses_hidden, ft_extr_mask)
+        attn_distr = self.attn(enc_output, ses_hidden, non_pad_mask)
 
         #- Weight accordingly
         attn_output = self.dropout(attn_distr * enc_output)
