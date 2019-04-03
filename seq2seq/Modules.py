@@ -34,12 +34,13 @@ class MultiplicativeAttention(nn.Module):
         self.attn_weight = nn.Linear(d_hidden, d_model)
         self.softmax = nn.Softmax(dim=1)
 
-    def forward(self, enc_output, ses_hidden, ft_extr_mask):
+    def forward(self, enc_output, ses_hidden, non_pad_mask):
         attn_vec = self.attn_weight(ses_hidden).unsqueeze(-1)
 
         #- Compute attention distribution and fill pad values with 0
         attn_distr = torch.bmm(enc_output, attn_vec).repeat(1, 1, enc_output.size(-1))
-        attn_distr = self.softmax(attn_distr + ft_extr_mask)
+        attn_distr[~non_pad_mask] = float('-inf')
+        attn_distr = self.softmax(attn_distr)
         
         return attn_distr
 
@@ -51,11 +52,12 @@ class DotProductAttention(nn.Module):
         self.softmax = nn.Softmax(dim=1)
         assert d_model == d_hidden
     
-    def forward(self, enc_output, ses_hidden, ft_extr_mask):
+    def forward(self, enc_output, ses_hidden, non_pad_mask):
         attn_vec = ses_hidden.unsqueeze(-1)
 
         #- Compute attention distribution and fill pad values with 0
         attn_distr = torch.bmm(enc_output, attn_vec).repeat(1, 1, enc_output.size(-1))
-        attn_distr = self.softmax(attn_distr + ft_extr_mask)
+        attn_distr[~non_pad_mask] = float('-inf')
+        attn_distr = self.softmax(attn_distr)
 
         return attn_distr
