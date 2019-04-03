@@ -2,7 +2,8 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import seq2seq.Constants as Constants
+
+from seq2seq import Constants
 from seq2seq.Layers import EncoderLayer, DecoderLayer, AttentionLayer
 
 
@@ -122,8 +123,9 @@ class Session(nn.Module):
     def forward(self, enc_output, src_seq, return_attns=False):
         #- Prepare mask
         non_pad_mask = get_non_pad_mask(src_seq)
-        non_pad_mask = non_pad_mask.repeat(1, 1, enc_output.size(-1)).byte()
+        non_pad_mask = non_pad_mask.repeat(1, 1, enc_output.size(-1))
         enc_output *= non_pad_mask
+        non_pad_mask = non_pad_mask.byte()
 
         #- Extract features
         features = enc_output
@@ -140,7 +142,7 @@ class Session(nn.Module):
         return ses_output,
 
 class Decoder(nn.Module):
-    ''' A decoder model with self attention mechanism. '''
+    ''' A decoder model with self attention mechanism '''
 
     def __init__(
             self,

@@ -1,6 +1,7 @@
 ''' Define the Layers '''
 import torch
 import torch.nn as nn
+
 from seq2seq.SubLayers import MultiHeadAttention, PositionwiseFeedForward
 from seq2seq.Modules import MultiplicativeAttention, DotProductAttention
 

@@ -6,7 +6,7 @@ import pickle
 import torch
 import spacy
 import numpy as np
-from load_glove import create_glove_emb_table
+from utils.load_glove import create_glove_emb_table
 
 
 nlp = spacy.blank('en')

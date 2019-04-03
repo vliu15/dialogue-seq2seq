@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import argparse
 import numpy as np
 import spacy
+
 from seq2seq.Models import Seq2Seq
 from seq2seq.Translator import Translator
 from seq2seq.Beam import Beam
