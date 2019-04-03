@@ -112,6 +112,7 @@ class Session(nn.Module):
         self.d_hidden = d_hidden
         self.memory = nn.LSTMCell(d_model, d_hidden)
         self.attn = AttentionLayer(d_hidden, d_model, dropout)
+        self.layer_norm = nn.LayerNorm(d_model)
 
     def zero_lstm_state(self, batch_size, device):
         ''' Reset LSTM hidden states between batches '''
@@ -126,12 +127,12 @@ class Session(nn.Module):
         #- Extract features
         features = enc_output
         non_pad_mask = non_pad_mask.repeat(1, 1, enc_output.size(-1)).byte()
-        features[~non_pad_mask] = float('-inf')
         features, _ = torch.max(features, dim=1)
 
         #- Compute attention with global context
         self.h, self.c = self.memory(features, (self.h, self.c))
         ses_output, ses_attn_distr = self.attn(enc_output, self.h, non_pad_mask)
+        ses_output = self.layer_norm(ses_output + enc_output)
 
         if return_attns:
             return ses_output, ses_attn_distr
