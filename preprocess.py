@@ -211,7 +211,7 @@ def main():
     opt = parser.parse_args()
     opt.max_token_subseq_len = opt.max_subseq_len + 2 # include the <s> and </s>
 
-    ##-- training set
+    #- Training set
     print('[Info] Load training set.')
     train = []
     for train_file in opt.train_file.split(','):
@@ -219,34 +219,34 @@ def main():
             train += pickle.load(f)
     train_src_word_insts, train_tgt_word_insts = read_instances(
         train, opt.max_subseq_len, opt.max_seq_len, opt.keep_case, 'train')
-    # prune for mismatches and empty instances / sequences
+    
     print('[Info] Prune empty sentences and src/tgt mismatches.')
     train_src_word_insts, train_tgt_word_insts = prune(
         train_src_word_insts, train_tgt_word_insts, 'training')
     
-    ##-- validation set
+    #- Validation set
     print('[Info] Load validation set.')
     with open(opt.valid_file, 'rb') as f:
         val = pickle.load(f)
     val_src_word_insts, val_tgt_word_insts = read_instances(
         val, opt.max_subseq_len, opt.max_seq_len, opt.keep_case, 'valid')
-    # prune for mismatches and empty instances / sequences
+
     print('[Info] Prune empty sentences and src/tgt mismatches.')
     val_src_word_insts, val_tgt_word_insts = prune(
         val_src_word_insts, val_tgt_word_insts, 'validation')
 
-    ##-- testing set
+    #- Testing set
     print('[Info] Load testing set.')
     with open(opt.test_file, 'rb') as f:
         test = pickle.load(f)
     test_src_word_insts, test_tgt_word_insts = read_instances(
         test, opt.max_subseq_len, opt.max_seq_len, opt.keep_case, 'test')
-    # prune for mismatches and empty instances / sequences
+
     print('[Info] Prune empty sentences and src/tgt mismatches.')
     test_src_word_insts, test_tgt_word_insts = prune(
         test_src_word_insts, test_tgt_word_insts, 'testing')
 
-    ##-- build vocabulary
+    #- Build vocabulary
     if opt.vocab:
         with open(opt.vocab ,'rb') as f:
             predefined_data = pickle.load(f)
@@ -267,7 +267,7 @@ def main():
             print('[Info] Build vocabulary for target.')
             tgt_word2idx = build_vocab_idx(train_tgt_word_insts, opt.min_word_count)
 
-    ##-- generate glove embedding tables if using them
+    #- Generate glove embedding tables if using them
     if opt.use_glove_emb:
         src_word2idx, src_emb_table = create_glove_emb_table(src_word2idx, 'src')
         np.save('data/glove/src_emb_file.npy', src_emb_table)
@@ -278,7 +278,7 @@ def main():
             tgt_word2idx, tgt_emb_table = create_glove_emb_table(tgt_word2idx, 'tgt')
         np.save('data/glove/tgt_emb_file.npy', tgt_emb_table)
 
-    ##-- map word to index
+    #- Map word to index
     print('[Info] Convert training word instances into sequences of word index.')
     train_src_insts, train_tgt_insts = convert_instance_to_idx_seq(
         zip(train_src_word_insts, train_tgt_word_insts), src_word2idx, opt.unk_prop_max, 'train')
@@ -294,7 +294,7 @@ def main():
         zip(test_src_word_insts, test_tgt_word_insts), src_word2idx, opt.unk_prop_max, 'test')
     print('[Info] Final testing set size: {}'.format(len(test_src_insts)))
     
-    ##-- training data
+    #- Training data
     train_data = {
         'settings': opt,
         'dict': {
@@ -310,7 +310,7 @@ def main():
     print('[Info] Dump the processed training data to pickle file', opt.save_dir + '/train.data.pt')
     torch.save(train_data, opt.save_dir + '/train.data.pt')
 
-    ##-- testing data
+    #- Testing data
     test_data = {
         'settings': opt,
         'dict': {
