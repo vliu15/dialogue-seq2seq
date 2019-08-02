@@ -1,7 +1,7 @@
 # Sequence-to-Sequence Generative Dialogue Systems
 This is a Pytorch adaptation of the Transformer model in "[Attention is All You Need](https://arxiv.org/abs/1706.03762)" for memory-based generative dialogue systems. We borrow the Transformer encoder and decoder to encode decode individual responses. The encoded input updates a hidden state in an LSTM, which serves as a session memory. We train our dialogue system with the "[Internet Argument Corpus v1](https://nlds.soe.ucsc.edu/iac)".
 
-## Research Paper in repository as Paper.pdf
+## Note: Research paper in repository as Paper.pdf
 
 ## Seq2Seq Architecture
 We adopt a hierarchical architecture, where the higher level consists of an LSTM that updates its hidden state with every input, and the lower level consists of Transformer encoder and decoder blocks to process and generate individual responses.
