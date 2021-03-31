@@ -108,17 +108,20 @@ class Encoder(nn.Module):
         return enc_output,
 
 class Session(nn.Module):
-    def __init__(self, d_model, d_hidden, dropout=0.1):
+    def __init__(self, n_layers, d_model, d_hidden, dropout=0.1):
         super().__init__()
         self.d_hidden = d_hidden
-        self.memory = nn.LSTMCell(d_model, d_hidden)
+        self.n_layers = n_layers
+        self.memory = nn.ModuleList([nn.LSTMCell(d_model, d_hidden) if i == 0 else nn.LSTMCell(d_hidden, d_hidden) for i in range(n_layers)])
         self.attn = AttentionLayer(d_hidden, d_model, dropout)
-        self.layer_norm = nn.LayerNorm(d_model)
+
+        self.h = [None for _ in range(n_layers)]
+        self.c = [None for _ in range(n_layers)]
 
     def zero_lstm_state(self, batch_size, device):
         ''' Reset LSTM hidden states between batches '''
-        self.h = torch.zeros(batch_size, self.d_hidden).to(device)
-        self.c = torch.zeros(batch_size, self.d_hidden).to(device)
+        self.h = [torch.zeros(batch_size, self.d_hidden).to(device) for _ in range(self.n_layers)]
+        self.c = [torch.zeros(batch_size, self.d_hidden).to(device) for _ in range(self.n_layers)]
 
     def forward(self, enc_output, src_seq, return_attns=False):
         #- Prepare mask
@@ -132,9 +135,10 @@ class Session(nn.Module):
         features, _ = torch.max(features, dim=1)
 
         #- Compute attention with global context
-        self.h, self.c = self.memory(features, (self.h, self.c))
-        ses_output, ses_attn_distr = self.attn(enc_output, self.h, non_pad_mask)
-        ses_output = self.layer_norm(ses_output + enc_output)
+        for i in range(self.n_layers):
+            self.h[i], self.c[i] = self.memory[i](features, (self.h[i], self.c[i]))
+            features = self.h[i]
+        ses_output, ses_attn_distr = self.attn(enc_output, self.h[-1], non_pad_mask)
 
         if return_attns:
             return ses_output, ses_attn_distr
@@ -205,7 +209,7 @@ class Seq2Seq(nn.Module):
 
     def __init__(
             self,
-            n_src_vocab, n_tgt_vocab, len_max_seq,
+            n_src_vocab, n_tgt_vocab, len_max_seq, n_mem_layers=4,
             d_word_vec=512, d_model=512, d_inner=2048, d_hidden=512,
             n_layers=6, n_head=8, d_k=64, d_v=64, dropout=0.1,
             tgt_emb_prj_weight_sharing=True,
@@ -221,7 +225,7 @@ class Seq2Seq(nn.Module):
             n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
             dropout=dropout, emb_file=src_emb_file)
 
-        self.session = Session(d_model, d_hidden, dropout)
+        self.session = Session(n_mem_layers, d_model, d_hidden, dropout)
 
         self.decoder = Decoder(
             n_tgt_vocab=n_tgt_vocab, len_max_seq=len_max_seq,

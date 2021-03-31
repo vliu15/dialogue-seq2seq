@@ -31,10 +31,11 @@ class AttentionLayer(nn.Module):
     def __init__(self, d_hidden, d_model, dropout=0.1):
         super().__init__()
         #- Select attention mechanism depending on hidden sizes
-        if d_hidden != d_model:
-            self.attn = MultiplicativeAttention(d_model, d_hidden)
-        else:
-            self.attn = DotProductAttention(d_model, d_hidden)
+        # if d_hidden != d_model:
+        #     self.attn = MultiplicativeAttention(d_model, d_hidden)
+        # else:
+        #     self.attn = DotProductAttention(d_model, d_hidden)
+        self.attn = MultiplicativeAttention(d_model, d_hidden)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, enc_output, ses_hidden, non_pad_mask):

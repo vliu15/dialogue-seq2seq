@@ -38,9 +38,9 @@ def main():
 
     total = len(data)
 
-    train = data[total//10:]
-    val = data[total//20:total//10]
-    test = data[:total//20]
+    train = data[total//15:]
+    val = data[total//30:total//15]
+    test = data[:total//30]
     print("[Info] Data split into {}, {}, {} samples for training, validation, and testing.".format(len(train), len(val), len(test)))
 
     print('[Info] Saving validation set...')

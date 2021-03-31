@@ -145,7 +145,8 @@ def build_vocab_idx(word_insts, min_word_count):
         Constants.BOS_WORD: Constants.BOS,
         Constants.EOS_WORD: Constants.EOS,
         Constants.PAD_WORD: Constants.PAD,
-        Constants.UNK_WORD: Constants.UNK}
+        Constants.UNK_WORD: Constants.UNK,
+        Constants.MLM_WORD: Constants.MLM}
 
     word_count = {w: 0 for w in full_vocab}
 
@@ -199,10 +200,10 @@ def main():
     parser.add_argument('-valid_file', required=True)
     parser.add_argument('-test_file', required=True)
     parser.add_argument('-save_dir', required=True)
-    parser.add_argument('-max_subseq_len', type=int, default=50)
-    parser.add_argument('-max_seq_len', type=int, default=25)
-    parser.add_argument('-min_word_count', type=int, default=10)     # set to 1.0 to include all unique tokens
-    parser.add_argument('-unk_prop_max', type=float, default=0.075)  # set to 1.0 to disregard <unk> proportions
+    parser.add_argument('-max_subseq_len', type=int, default=64)
+    parser.add_argument('-max_seq_len', type=int, default=24)
+    parser.add_argument('-min_word_count', type=int, default=10)   # set to 1.0 to include all unique tokens
+    parser.add_argument('-unk_prop_max', type=float, default=0.5)  # set to 1.0 to disregard <unk> proportions
     parser.add_argument('-keep_case', action='store_true')
     parser.add_argument('-share_vocab', action='store_true')
     parser.add_argument('-vocab', default=None)

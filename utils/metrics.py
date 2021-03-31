@@ -10,22 +10,27 @@ def cal_performance(pred, gold, smoothing=False, mmi_factor=1.0):
     Calculate accuracy and loss with
     1) label smoothing if specified
     2) maximal mutual information (MMI) if specified
+    3) perplexity
     '''
     if mmi_factor > 0:
         #- Calculate CE loss with MMI objective
         pred_session, pred_no_session = torch.split(pred, int(pred.shape[0]/2), dim=0)
+        pred_no_session = pred_no_session.detach()
         loss = cal_mmi_loss(pred_session, pred_no_session, gold, smoothing=smoothing, mmi_factor=mmi_factor)
+        with torch.no_grad():
+            nll = cal_mle_loss(pred_session, gold, smoothing)
         pred = (pred_session - pred_no_session).max(1)[1]
     else:
         #- Calculate CE loss with MLE objective
         loss = cal_mle_loss(pred, gold, smoothing)
         pred = pred.max(1)[1]
+        nll = loss
     
     gold = gold.contiguous().view(-1)
     non_pad_mask = gold.ne(Constants.PAD)
     n_correct = pred.eq(gold)
     n_correct = n_correct.masked_select(non_pad_mask).sum().item()
-    return loss, n_correct
+    return loss, n_correct, nll
     
 def cal_mmi_loss(pred_session, pred_no_session, gold, smoothing=True, mmi_factor=1.0):
     '''

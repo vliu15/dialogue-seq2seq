@@ -39,7 +39,7 @@ class MultiplicativeAttention(nn.Module):
 
         #- Compute attention distribution and fill pad values with 0
         attn_distr = torch.bmm(enc_output, attn_vec).repeat(1, 1, enc_output.size(-1))
-        attn_distr[~non_pad_mask] = float('-inf')
+        attn_distr[~non_pad_mask.bool()] = -1e9
         attn_distr = self.softmax(attn_distr)
         
         return attn_distr

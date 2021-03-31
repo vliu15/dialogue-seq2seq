@@ -24,11 +24,11 @@ def train_epoch(model, training_data, optimizer, device, mmi_factor, smoothing=T
     total_loss = 0
     n_word_total = 0
     n_word_correct = 0
+    total_nll = 0
 
     #- Iterate through batches for training
-    for batch in tqdm(
-            training_data, mininterval=2,
-            desc='  - (Training)   ', leave=False):
+    pbar = tqdm(training_data, mininterval=2, leave=False)
+    for batch in pbar:
 
         #- Prepare data
         src_seq, src_pos, tgt_seq, tgt_pos = map(lambda x: x.to(device), batch)
@@ -36,6 +36,11 @@ def train_epoch(model, training_data, optimizer, device, mmi_factor, smoothing=T
 
         #- Clip the target_seq for the BOS token
         gold = tgt_seq[:, :, 1:]
+
+        #- Randomly mask out tokens of input sequence
+        mask = torch.rand(src_seq.size(0), src_seq.size(1), src_seq.size(2) - 2, device=device)
+        mask = (mask < 0.05).long()
+        src_seq[:, :, 1:-1] = (1 - mask) * src_seq[:, :, 1:-1] + mask * Constants.MLM
 
         #- Forward
         optimizer.zero_grad()
@@ -50,10 +55,12 @@ def train_epoch(model, training_data, optimizer, device, mmi_factor, smoothing=T
         #- Backward (use total loss)
         loss = 0
         n_correct = 0
+        nll = 0
         for i in range(n_steps):
-            loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=smoothing, mmi_factor=mmi_factor)
+            loss_, n_correct_, nll_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=smoothing, mmi_factor=mmi_factor)
             loss += loss_
             n_correct += n_correct_
+            nll += nll_
         loss.backward()
 
         #- Optimizer step
@@ -63,10 +70,16 @@ def train_epoch(model, training_data, optimizer, device, mmi_factor, smoothing=T
         total_loss += loss.item()
         n_word_correct += n_correct
         n_word_total += gold.ne(Constants.PAD).sum().item()
+        total_nll += nll.item()
+
+        pbar.update(1)
+        pbar.set_description(str(round(nll.item(), 4)))
+    pbar.close()
 
     loss_per_word = total_loss/n_word_total
     accuracy = n_word_correct/n_word_total
-    return loss_per_word, accuracy
+    nll_per_word = nll/n_word_total
+    return loss_per_word, accuracy, nll_per_word
 
 def eval_epoch(model, validation_data, device, mmi_factor):
     ''' Epoch operation in evaluation phase '''
@@ -76,6 +89,7 @@ def eval_epoch(model, validation_data, device, mmi_factor):
     total_loss = 0
     n_word_total = 0
     n_word_correct = 0
+    total_nll = 0
 
     with torch.no_grad():
         #- Iterate through validation batches
@@ -102,19 +116,23 @@ def eval_epoch(model, validation_data, device, mmi_factor):
             #- Accumulate loss and accuracy
             loss = 0
             n_correct = 0
+            nll = 0
             for i in range(n_steps):
-                loss_, n_correct_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=False, mmi_factor=mmi_factor)
+                loss_, n_correct_, nll_ = cal_performance(preds[i], gold[:, i, :].squeeze(1), smoothing=False, mmi_factor=mmi_factor)
                 loss += loss_
                 n_correct += n_correct_
+                nll += nll_
 
             #- Logging
             total_loss += loss.item()
             n_word_correct += n_correct
             n_word_total += gold.ne(Constants.PAD).sum().item()
+            total_nll += nll.item()
 
     loss_per_word = total_loss/n_word_total
     accuracy = n_word_correct/n_word_total
-    return loss_per_word, accuracy
+    nll_per_word = total_nll/n_word_total
+    return loss_per_word, accuracy, nll_per_word
 
 def train(model, training_data, validation_data, optimizer, device, opt, epoch):
     ''' Start training '''
@@ -134,28 +152,28 @@ def train(model, training_data, validation_data, optimizer, device, opt, epoch):
             log_vf.write('epoch,loss,ppl,accuracy\n')
 
     #- Train and iterate through epochs 
-    valid_accus = []
+    valid_nlls = []
     for epoch_i in range(epoch, opt.epoch):
         print('[ Epoch', epoch_i, ']')
 
         #- Pass through training data
         start = time.time()
-        train_loss, train_accu = train_epoch(
+        train_loss, train_accu, train_nll = train_epoch(
             model, training_data, optimizer, device, opt.mmi_factor, smoothing=opt.label_smoothing)
         print('  - (Training)   ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
               'loss/word: {loss:8.5f}, elapse: {elapse:3.3f} min'.format(
-                  ppl=math.exp(min(train_loss, 100)), accu=100*train_accu,
+                  ppl=math.exp(min(train_nll, 100)), accu=100*train_accu,
                   loss=train_loss, elapse=(time.time()-start)/60))
 
         #- Pass through validation data
         start = time.time()
-        valid_loss, valid_accu = eval_epoch(model, validation_data, device, opt.mmi_factor)
-        print('  - (Validation) gppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
+        valid_loss, valid_accu, valid_nll = eval_epoch(model, validation_data, device, opt.mmi_factor)
+        print('  - (Validation) ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
                 'loss/word: {loss:8.5f}, elapse: {elapse:3.3f} min'.format(
-                    ppl=math.exp(min(valid_loss, 100)), accu=100*valid_accu,
+                    ppl=math.exp(min(valid_nll, 100)), accu=100*valid_accu,
                     loss=valid_loss, elapse=(time.time()-start)/60))
 
-        valid_accus += [valid_accu]
+        valid_nlls += [valid_nll]
 
         #- Prepare checkpoint
         model_state_dict = model.state_dict()
@@ -171,7 +189,7 @@ def train(model, training_data, validation_data, optimizer, device, opt, epoch):
                 torch.save(checkpoint, model_name)
             elif opt.save_mode == 'best':
                 model_name = opt.save_model + '.chkpt'
-                if valid_accu >= max(valid_accus):
+                if valid_nll >= max(valid_nlls):
                     torch.save(checkpoint, model_name)
                     print('    - [Info] The checkpoint file has been updated.')
 
@@ -192,8 +210,8 @@ def main():
     parser.add_argument('-data', required=True)
 
     parser.add_argument('-epoch', type=int, default=100)
-    parser.add_argument('-batch_size', type=int, default=8)
-    parser.add_argument('-lr', type=float, default=1e-2)
+    parser.add_argument('-batch_size', type=int, default=4)
+    parser.add_argument('-lr', type=float, default=1e-3)
 
     parser.add_argument('-src_emb_file', type=str, default='')
     parser.add_argument('-tgt_emb_file', type=str, default='')
@@ -205,6 +223,7 @@ def main():
     parser.add_argument('-d_k', type=int, default=64)
     parser.add_argument('-d_v', type=int, default=64)
 
+    parser.add_argument('-n_mem_layers', type=int, default=4)
     parser.add_argument('-n_head', type=int, default=8)
     parser.add_argument('-n_layers', type=int, default=6)
     parser.add_argument('-n_warmup_steps', type=int, default=4000)
@@ -249,6 +268,7 @@ def main():
         opt.src_vocab_size,
         opt.tgt_vocab_size,
         opt.max_subseq_len,
+        opt.n_mem_layers,
         tgt_emb_prj_weight_sharing=opt.proj_share_weight,
         emb_src_tgt_weight_sharing=opt.embs_share_weight,
         d_k=opt.d_k,
